@@ -1,7 +1,9 @@
 //! Host-side implementation and registration.
 pub use crate::sequence_builder;
-use crate::{BLAKE2_FUNCT3, BLAKE2_FUNCT7, BLAKE2_NAME, INLINE_OPCODE};
+
+use crate::{INLINE_OPCODE, SECP256K1_MULQ_FUNCT3, SECP256K1_MULQ_FUNCT7, SECP256K1_MULQ_NAME};
 use tracer::register_inline;
+
 use tracer::utils::inline_sequence_writer::{
     write_inline_trace, AppendMode, InlineDescriptor, SequenceInputs,
 };
@@ -9,28 +11,33 @@ use tracer::utils::inline_sequence_writer::{
 pub fn init_inlines() -> Result<(), String> {
     register_inline(
         INLINE_OPCODE,
-        BLAKE2_FUNCT3,
-        BLAKE2_FUNCT7,
-        BLAKE2_NAME,
-        std::boxed::Box::new(sequence_builder::blake2b_inline_sequence_builder),
-        None,
+        SECP256K1_MULQ_FUNCT3,
+        SECP256K1_MULQ_FUNCT7,
+        SECP256K1_MULQ_NAME,
+        std::boxed::Box::new(sequence_builder::secp256k1_mulq_inline_sequence_builder),
+        Some(std::boxed::Box::new(
+            sequence_builder::secp256k1_mulq_custom_trace,
+        )),
     )?;
 
     Ok(())
 }
 
 pub fn store_inlines() -> Result<(), String> {
+    // Store secp256k1 default inline trace
     let inline_info = InlineDescriptor::new(
-        BLAKE2_NAME.to_string(),
+        SECP256K1_MULQ_NAME.to_string(),
         INLINE_OPCODE,
-        BLAKE2_FUNCT3,
-        BLAKE2_FUNCT7,
+        SECP256K1_MULQ_FUNCT3,
+        SECP256K1_MULQ_FUNCT7,
     );
     let inputs = SequenceInputs::default();
-    let instructions =
-        sequence_builder::blake2b_inline_sequence_builder((&inputs).into(), (&inputs).into());
+    let instructions = sequence_builder::secp256k1_mulq_inline_sequence_builder(
+        (&inputs).into(),
+        (&inputs).into(),
+    );
     write_inline_trace(
-        "blake2_trace.joltinline",
+        "secp256k1_mulq_trace.joltinline",
         &inline_info,
         &inputs,
         &instructions,
@@ -45,12 +52,12 @@ pub fn store_inlines() -> Result<(), String> {
 #[ctor::ctor]
 fn auto_register() {
     if let Err(e) = init_inlines() {
-        eprintln!("Failed to register BLAKE2 inlines: {e}");
+        tracing::error!("Failed to register secp256k1 inlines: {e}");
     }
 
     if std::env::var("STORE_INLINE").unwrap_or_default() == "true" {
         if let Err(e) = store_inlines() {
-            eprintln!("Failed to store BLAKE2 inline traces: {e}");
+            eprintln!("Failed to store secp256k1 inline traces: {e}");
         }
     }
 }
