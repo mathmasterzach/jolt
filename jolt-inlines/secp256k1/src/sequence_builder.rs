@@ -4,21 +4,15 @@ use core::array;
 use tracer::{
     emulator::cpu::Cpu,
     instruction::{
-        add::ADD, and::AND, blt::BLT, format::format_inline::FormatInline, ld::LD, lui::LUI,
-        mul::MUL, mulhu::MULHU, or::OR, sd::SD, sltiu::SLTIU, sltu::SLTU, sub::SUB,
+        add::ADD, and::AND, format::format_inline::FormatInline, ld::LD, lui::LUI, mul::MUL,
+        mulhu::MULHU, or::OR, sd::SD, sltiu::SLTIU, sltu::SLTU, sub::SUB,
         virtual_advice::VirtualAdvice, virtual_assert_eq::VirtualAssertEQ,
         virtual_assert_lte::VirtualAssertLTE, xori::XORI, Cycle, Instruction,
     },
-    utils::{
-        inline_helpers::{
-            InstrAssembler,
-            Value::{Imm, Reg},
-        },
-        virtual_registers::VirtualRegisterGuard,
-    },
+    utils::{inline_helpers::InstrAssembler, virtual_registers::VirtualRegisterGuard},
 };
 
-use crate::{exec::get_secp256k1_mulq_advice, SECP256K1_Q};
+use crate::exec::get_secp256k1_mulq_advice;
 
 /*
     secp256k1 modular multiplication algorithm overview:
@@ -59,7 +53,7 @@ impl Secp256k1Mulq {
         Secp256k1Mulq { asm, vr, operands }
     }
     /// Custom trace function
-    fn trace(mut self, cpu: &mut Cpu, trace: Option<&mut Vec<Cycle>>) {
+    fn trace(self, cpu: &mut Cpu, trace: Option<&mut Vec<Cycle>>) {
         // read memory directly to get inputs
         let a_addr = cpu.x[self.operands.rs1 as usize] as u64;
         let a = [
@@ -83,10 +77,10 @@ impl Secp256k1Mulq {
         let mut trace = trace;
         let mut inline_sequence = self.inline_sequence();
         // debug print number of instructions for benchmarking
-        println!(
+        /*println!(
             "secp256k1_mulq custom trace with {} instructions",
             inline_sequence.len()
-        );
+        );*/
         // execute remaining instructions, injecting advice where needed
         for instr in inline_sequence.iter_mut() {
             if let Instruction::VirtualAdvice(va) = instr {

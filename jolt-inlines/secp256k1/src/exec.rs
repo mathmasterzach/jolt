@@ -1,12 +1,12 @@
 use crate::SECP256K1_Q;
 use num_bigint::BigUint;
 
-pub fn u256_to_bigint(x: &[u64; 4]) -> BigUint {
+fn u256_to_bigint(x: &[u64; 4]) -> BigUint {
     let bytes: Vec<u8> = x.iter().flat_map(|&limb| limb.to_le_bytes()).collect();
     BigUint::from_bytes_le(&bytes)
 }
 
-pub fn bigint_to_u256(x: &BigUint) -> [u64; 4] {
+fn bigint_to_u256(x: &BigUint) -> [u64; 4] {
     let arr = x.to_u64_digits();
     if arr.len() > 4 {
         panic!("BigUint too large to fit in u256");
@@ -17,6 +17,26 @@ pub fn bigint_to_u256(x: &BigUint) -> [u64; 4] {
     }
     result
 }
+
+// without going through bigint, multiply two 256-bit numbers to get a 512-bit result
+/*fn mul_256x256_to_512(x: &[u64; 4], y: &[u64; 4]) -> [u64; 8] {
+    let mut result = [0u64; 8];
+    for i in 0..4 {
+        let mut carry = 0u128;
+        for j in 0..4 {
+            let p = (x[i] as u128) * (y[j] as u128) + (result[i + j] as u128) + carry;
+            result[i + j] = p as u64;
+            carry = p >> 64;
+        }
+        result[i + 4] = carry as u64;
+    }
+    result
+}
+
+// without going through bigint, divide a 512-bit number by a 256-bit number to get a 256-bit quotient
+fn div_512_by_256_to_256(numerator: &[u64; 8], denominator: &[u64; 4]) -> [u64; 4] {
+
+}*/
 
 /// Gets advice for get_secp256k1_mulq
 /// Advice is x * y / q

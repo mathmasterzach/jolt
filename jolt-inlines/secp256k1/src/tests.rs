@@ -1,5 +1,4 @@
 mod sequence_tests {
-    use super::*;
     use crate::exec::execute_secp256k1_mulq;
     use crate::{INLINE_OPCODE, SECP256K1_MULQ_FUNCT3, SECP256K1_MULQ_FUNCT7};
     use tracer::emulator::cpu::Xlen;
