@@ -15,8 +15,15 @@ use super::{INPUT_LIMBS, OUTPUT_LIMBS};
 /// - a0..a3: First operand (4 u64 limbs)
 /// - a4..a7: Second operand (4 u64 limbs)
 /// - s0..s7: Result accumulator (8 u64 limbs)
-/// - t0: Temporary register with several uses
-pub(crate) const NEEDED_REGISTERS: u8 = 17;
+/// - s0 is also used as temporary throughout the sequence
+pub(crate) const NEEDED_REGISTERS: u8 = 16;
+// Note that it is possible to reduce this to 14
+// Saving 2 instructions. However, it is complicated.
+// To do this:
+// when s5 is being calculated, compute t = high(a1 * b3)
+// and write carry(s5 + t) into a1 which will now be where s6 is stored
+// when done computing s5, b1 is no longer needed, so we can write s7 into b1
+// this saves the need for designated registers for s6 and s7
 
 /// Builds assembly sequence for 256-bit × 256-bit multiplication
 /// Expects first operand (4 u64 words) in RAM at location rs1
@@ -48,9 +55,9 @@ impl BigIntMulSequenceBuilder {
     fn s(&self, i: usize) -> u8 {
         *self.vr[INPUT_LIMBS + INPUT_LIMBS + i]
     }
-    // Temporaries
+    // Temporaries (same as result thanks to reuse)
     fn t(&self, i: usize) -> u8 {
-        *self.vr[INPUT_LIMBS + INPUT_LIMBS + OUTPUT_LIMBS + i]
+        *self.vr[INPUT_LIMBS + INPUT_LIMBS + i]
     }
 
     /// Builds the complete multiplication sequence
@@ -64,8 +71,7 @@ impl BigIntMulSequenceBuilder {
                 .emit_ld::<LD>(self.b(i), self.operands.rs2, i as i64 * 8);
         }
         // first multiplication
-        // (R[1], R[0]) = A[0] * B[0]
-        self.asm.emit_r::<MUL>(self.s(0), self.a(0), self.b(0));
+        // (R[1], _) = A[0] * B[0]
         self.asm.emit_r::<MULHU>(self.s(1), self.a(0), self.b(0));
         // loop over output limbs
         for k in 1..OUTPUT_LIMBS {
@@ -120,6 +126,9 @@ impl BigIntMulSequenceBuilder {
                 }
             }
         }
+        // We've been using s0 as temporary, so finally set s0 correctly
+        // (_, R[0]) = A[0] * B[0]
+        self.asm.emit_r::<MUL>(self.s(0), self.a(0), self.b(0));
         // Store result (8 u64 words) back to the memory rs3 points to
         for i in 0..OUTPUT_LIMBS {
             self.asm
