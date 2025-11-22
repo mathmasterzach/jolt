@@ -1,28 +1,3 @@
-/*mod exec_functions {
-    use crate::exec::execute_secp256k1_mulq;
-    #[test]
-    fn test_exec_secp256k1_mulq_function() {
-        /*let x = [
-            0x123456789ABCDEF0,
-            0x0FEDCBA987654321,
-            0x1111111111111111,
-            0x2222222222222222,
-        ];
-        let y = [
-            0x0FEDCBA987654321,
-            0x123456789ABCDEF0,
-            0x3333333333333333,
-            0x4444444444444444,
-        ];
-        let result = execute_secp256k1_mulq(&x, &y);
-        // print the result for visual inspection
-        println!("x: {:?}", x);
-        println!("y: {:?}", y);
-        println!("Result: {:?}", result);*/
-        unimplemented!();
-    }
-}*/
-
 mod sequence_tests {
     use super::*;
     use crate::exec::execute_secp256k1_mulq;
@@ -44,16 +19,15 @@ mod sequence_tests {
             SECP256K1_MULQ_FUNCT3,
             SECP256K1_MULQ_FUNCT7,
         ));
-
-        //let result_vec = harness.read_output64(4);
-        //let mut result = [0u64; 4];
-        //result.copy_from_slice(&result_vec);
-
-        //assert_eq!(&result, expected, "secp256k1_mulq result mismatch");
+        let result_vec = harness.read_output64(4);
+        let mut result = [0u64; 4];
+        result.copy_from_slice(&result_vec);
+        assert_eq!(result, expected, "secp256k1_mulq result mismatch");
     }
 
     #[test]
     fn test_secp256k1_mulq_direct_execution() {
+        // arbitrary test vector for direct execution
         let lhs = [
             0x123456789ABCDEF0,
             0x0FEDCBA987654321,
