@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "guest", no_std)]
 
+use ark_ff::{BigInt, Field};
+use ark_secp256k1::Fq;
 use jolt::{end_cycle_tracking, start_cycle_tracking};
 
 // functions adapted from arkworks for large integer arithmetic
@@ -73,16 +75,36 @@ fn naive_secp256k1_mulq(a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
     r
 }
 
+// wrapper to make it easier to create Fq from [u64; 4]
+fn arr_to_fq(a: &[u64; 4]) -> Fq {
+    //Fq::from_bigint_unchecked(BigInt { 0: *a }).expect("Failed to create Fq from bigint")
+    Fq::new_unchecked(BigInt { 0: *a })
+}
+
+// montgomery multiplication for secp256k1 prime field
+// adapted from arkworks'
+pub fn secp256k1_mulq(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
+    (arr_to_fq(a) * arr_to_fq(b)).0 .0
+}
+
+// inverse in the secp256k1 prime field
+fn secp256k1_invq(a: &[u64; 4]) -> [u64; 4] {
+    arr_to_fq(a)
+        .inverse()
+        .expect("Attempted to invert zero in secp256k1 field")
+        .0
+         .0
+}
+
 #[jolt::provable(memory_size = 32768, max_trace_length = 4194304)]
 fn secp256k1q_chain(x: [u64; 4], num_iters: u32) -> [u64; 4] {
     let mut acc = x;
     for _ in 0..num_iters {
-        start_cycle_tracking("naive");
-        acc = naive_secp256k1_mulq(acc, x);
-        end_cycle_tracking("naive");
-        start_cycle_tracking("inline");
-        acc = jolt_inlines_secp256k1::secp256k1_mulq(acc, x);
-        end_cycle_tracking("inline");
+        //acc = core::hint::black_box(secp256k1_mulq(&acc, &secp256k1_invq(&x)));
+        //acc = core::hint::black_box(jolt_inlines_secp256k1::secp256k1_divq_fast(acc, x));
+        let tmp = core::hint::black_box(jolt_inlines_secp256k1::secp256k1_divq_unchecked(acc, x));
+        assert_eq!(acc, core::hint::black_box(secp256k1_mulq(&tmp, &x)));
+        acc = tmp;
     }
     acc
 }

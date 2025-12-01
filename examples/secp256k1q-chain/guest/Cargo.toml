@@ -9,3 +9,7 @@ guest = []
 [dependencies]
 jolt = { package = "jolt-sdk", path = "../../../jolt-sdk", features = [] }
 jolt-inlines-secp256k1 = { package = "jolt-inlines-secp256k1", path = "../../../jolt-inlines/secp256k1" }
+ark-secp256k1 = { git="https://github.com/arkworks-rs/algebra", default-features = false }
+ark-serialize = { git="https://github.com/arkworks-rs/algebra", default-features = false }
+ark-ff        = { git="https://github.com/arkworks-rs/algebra", default-features = false }
+ark-ec        = { git="https://github.com/arkworks-rs/algebra", default-features = false }
