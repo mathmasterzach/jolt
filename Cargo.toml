@@ -56,6 +56,7 @@ members = [
   "jolt-inlines/secp256k1",
   "jolt-inlines/grumpkin",
   "jolt-inlines/p256",
+  "jolt-inlines/aes",
   "examples/btreemap/host",
   "examples/btreemap/guest",
   "examples/collatz",
@@ -409,3 +410,4 @@ jolt-inlines-bigint = { path = "./jolt-inlines/bigint", default-features = false
 jolt-inlines-secp256k1 = { path = "./jolt-inlines/secp256k1", default-features = false }
 jolt-inlines-grumpkin = { path = "./jolt-inlines/grumpkin", default-features = false }
 jolt-inlines-p256 = { path = "./jolt-inlines/p256", default-features = false }
+jolt-inlines-aes = { path = "./jolt-inlines/aes", default-features = false }

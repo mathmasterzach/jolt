@@ -3017,6 +3017,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "jolt-inlines-aes"
+version = "0.1.0"
+dependencies = [
+ "jolt-inlines-sdk",
+]
+
+[[package]]
 name = "jolt-inlines-bigint"
 version = "0.1.0"
 dependencies = [
