@@ -16,6 +16,7 @@ use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub mod a;
+pub mod aes;
 pub mod assert;
 pub mod i;
 pub mod m;
@@ -25,6 +26,7 @@ use crate::{
     JoltInstructionKind, JoltInstructionRow, NormalizedOperands, SourceInlineKey,
     SourceInstructionKind, SourceInstructionRow,
 };
+pub use aes::sbox8w::AesSbox8W;
 pub use assert::AssertEq;
 pub use assert::AssertHalfwordAlignment;
 pub use assert::AssertLte;
@@ -385,6 +387,7 @@ pub enum JoltInstruction<T = JoltInstructionRow> {
     VirtualXorRotW12(VirtualXorRotW12<T>),
     VirtualXorRotW8(VirtualXorRotW8<T>),
     VirtualXorRotW7(VirtualXorRotW7<T>),
+    AesSbox8W(AesSbox8W<T>),
     VirtualAdvice(VirtualAdvice<T>),
     VirtualAdviceLen(VirtualAdviceLen<T>),
     VirtualAdviceLoad(VirtualAdviceLoad<T>),
@@ -560,6 +563,7 @@ impl_jolt_instructions_flags! {
     VirtualXorRotW12 => VirtualXORROTW12,
     VirtualXorRotW8 => VirtualXORROTW8,
     VirtualXorRotW7 => VirtualXORROTW7,
+    AesSbox8W => AESSBOX8W,
     VirtualAdvice => VirtualAdvice,
     VirtualAdviceLen => VirtualAdviceLen,
     VirtualAdviceLoad => VirtualAdviceLoad,

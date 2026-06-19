@@ -61,6 +61,7 @@ pub mod instruction {
         pub use jolt_riscv::instructions::VirtualXorRotW7 as VirtualXORROTW7;
         pub use jolt_riscv::instructions::VirtualXorRotW8 as VirtualXORROTW8;
     }
+    alias_instruction!(aes_sbox8w, AESSBOX8W, AesSbox8W);
     alias_instruction!(
         virtual_zero_extend_word,
         VirtualZeroExtendWord,

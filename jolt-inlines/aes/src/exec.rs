@@ -134,3 +134,14 @@ pub fn execute_aes_add_round_key_initial(mut state: [u8; 16], round_key: [u8; 16
     add_round_key(&mut state, &round_key);
     state
 }
+
+//
+#[inline]
+pub fn execute_sbox8w(x: u64) -> u64 {
+    let mut y = 0u64;
+    for i in 0..8 {
+        let byte = ((x >> (i * 8)) & 0xFF) as u8;
+        y |= (SBOX[byte as usize] as u64) << (i * 8);
+    }
+    y
+}

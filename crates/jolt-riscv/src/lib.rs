@@ -156,6 +156,7 @@ macro_rules! for_each_instruction_kind {
                 VirtualXORROTW12 => VirtualXorRotW12 => "jolt.virtual.xorrotw12",
                 VirtualXORROTW8 => VirtualXorRotW8 => "jolt.virtual.xorrotw8",
                 VirtualXORROTW7 => VirtualXorRotW7 => "jolt.virtual.xorrotw7",
+                AESSBOX8W => AesSbox8W => "jolt.aes.sbox8w",
             ]
         }
     };
@@ -233,6 +234,7 @@ macro_rules! for_each_jolt_instruction_kind {
                 VirtualXORROTW12 => VirtualXorRotW12 => (0x0086, "jolt.virtual.xorrotw12"),
                 VirtualXORROTW8 => VirtualXorRotW8 => (0x0087, "jolt.virtual.xorrotw8"),
                 VirtualXORROTW7 => VirtualXorRotW7 => (0x0088, "jolt.virtual.xorrotw7"),
+                AESSBOX8W => AesSbox8W => (0x0089, "jolt.aes.sbox8w"),
             ]
         }
     };

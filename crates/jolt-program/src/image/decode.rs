@@ -58,7 +58,8 @@ pub fn decode_instruction(
         0b0001111 => SourceInstructionKind::FENCE,
         0b0101111 => decode_amo(word)?,
         0b1110011 => decode_system(word)?,
-        0b0001011 | 0b0101011 => SourceInstructionKind::Inline,
+        0b0001011 => decode_inst_or_inline(word)?,
+        0b0101011 => SourceInstructionKind::Inline,
         0b1011011 => decode_custom(word)?,
         _ => return invalid("unknown RV64 opcode"),
     };
@@ -172,6 +173,15 @@ fn decode_system(word: u32) -> Result<SourceInstructionKind, ProgramError> {
         (1, _, _) => Ok(SourceInstructionKind::CSRRW),
         (2, _, _) => Ok(SourceInstructionKind::CSRRS),
         _ => invalid("unsupported system instruction"),
+    }
+}
+
+fn decode_inst_or_inline(word: u32) -> Result<SourceInstructionKind, ProgramError> {
+    match (funct7(word), funct3(word)) {
+        (0x08, 0x01) => Ok(SourceInstructionKind::AesSbox8W(
+            jolt_riscv::instructions::AesSbox8W(()),
+        )),
+        _ => Ok(SourceInstructionKind::Inline),
     }
 }
 

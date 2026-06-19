@@ -1,3 +1,4 @@
+use aes_sbox8w::AesSbox8WTable;
 use and::AndTable;
 use andn::AndnTable;
 use equal::EqualTable;
@@ -74,6 +75,7 @@ pub trait PrefixSuffixDecomposition<const XLEN: usize>: JoltLookupTable + Defaul
 pub mod prefixes;
 pub mod suffixes;
 
+pub mod aes_sbox8w;
 pub mod and;
 pub mod andn;
 pub mod equal;
@@ -160,6 +162,7 @@ pub enum LookupTables<const XLEN: usize> {
     VirtualXORROTW12(VirtualXORROTWTable<XLEN, 12>),
     VirtualXORROTW8(VirtualXORROTWTable<XLEN, 8>),
     VirtualXORROTW7(VirtualXORROTWTable<XLEN, 7>),
+    AESSBOX8W(AesSbox8WTable<XLEN>),
 }
 
 impl<const XLEN: usize> LookupTables<XLEN> {
@@ -212,6 +215,7 @@ impl<const XLEN: usize> LookupTables<XLEN> {
             LookupTables::VirtualXORROTW8(table) => table.materialize(),
             LookupTables::VirtualXORROTW12(table) => table.materialize(),
             LookupTables::VirtualXORROTW16(table) => table.materialize(),
+            LookupTables::AESSBOX8W(table) => table.materialize(),
         }
     }
 
@@ -257,6 +261,7 @@ impl<const XLEN: usize> LookupTables<XLEN> {
             LookupTables::VirtualXORROTW8(table) => table.materialize_entry(index),
             LookupTables::VirtualXORROTW12(table) => table.materialize_entry(index),
             LookupTables::VirtualXORROTW16(table) => table.materialize_entry(index),
+            LookupTables::AESSBOX8W(table) => table.materialize_entry(index),
         }
     }
 
@@ -306,6 +311,7 @@ impl<const XLEN: usize> LookupTables<XLEN> {
             LookupTables::VirtualXORROTW8(table) => table.evaluate_mle(r),
             LookupTables::VirtualXORROTW12(table) => table.evaluate_mle(r),
             LookupTables::VirtualXORROTW16(table) => table.evaluate_mle(r),
+            LookupTables::AESSBOX8W(table) => table.evaluate_mle(r),
         }
     }
 
@@ -351,6 +357,7 @@ impl<const XLEN: usize> LookupTables<XLEN> {
             LookupTables::VirtualXORROTW8(table) => table.suffixes(),
             LookupTables::VirtualXORROTW12(table) => table.suffixes(),
             LookupTables::VirtualXORROTW16(table) => table.suffixes(),
+            LookupTables::AESSBOX8W(table) => table.suffixes(),
         }
     }
 
@@ -400,6 +407,7 @@ impl<const XLEN: usize> LookupTables<XLEN> {
             LookupTables::VirtualXORROTW8(table) => table.combine(prefixes, suffixes),
             LookupTables::VirtualXORROTW12(table) => table.combine(prefixes, suffixes),
             LookupTables::VirtualXORROTW16(table) => table.combine(prefixes, suffixes),
+            LookupTables::AESSBOX8W(table) => table.combine(prefixes, suffixes),
         }
     }
 }

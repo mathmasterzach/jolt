@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::challenge_ops::{ChallengeOps, FieldOps};
 use crate::traits::LookupTable;
 
+pub mod aes_sbox8w;
 pub mod and;
 pub mod andn;
 pub mod equal;
@@ -153,6 +154,7 @@ pub enum LookupTableKind<const XLEN: usize> {
     VirtualXORROTW12(VirtualXORROTWTable<XLEN, 12>),
     VirtualXORROTW8(VirtualXORROTWTable<XLEN, 8>),
     VirtualXORROTW7(VirtualXORROTWTable<XLEN, 7>),
+    AESSBOX8W(aes_sbox8w::AesSbox8WTable<XLEN>),
 }
 
 /// Dispatches a method call to the inner table for every
@@ -202,6 +204,7 @@ macro_rules! dispatch {
             Self::VirtualXORROTW12($t) => $expr,
             Self::VirtualXORROTW8($t) => $expr,
             Self::VirtualXORROTW7($t) => $expr,
+            Self::AESSBOX8W($t) => $expr,
         }
     };
 }

@@ -349,6 +349,7 @@ impl<const XLEN: usize> InstructionLookup<XLEN> for JoltInstructionRow {
             JoltInstructionKind::VirtualXORROTW7 => {
                 LookupTables::VirtualXORROTW7(Default::default())
             }
+            JoltInstructionKind::AESSBOX8W => LookupTables::AESSBOX8W(Default::default()),
             JoltInstructionKind::NoOp
             | JoltInstructionKind::LD
             | JoltInstructionKind::SD
@@ -489,12 +490,13 @@ define_rv64imac_trait_impls! {
         VirtualROTRI, VirtualROTRIW,
         VirtualSRA, VirtualSRAI, VirtualSRL, VirtualSRLI,
         VirtualXORROT32, VirtualXORROT24, VirtualXORROT16, VirtualXORROT63,
-        VirtualXORROTW16, VirtualXORROTW12, VirtualXORROTW8, VirtualXORROTW7
+        VirtualXORROTW16, VirtualXORROTW12, VirtualXORROTW8, VirtualXORROTW7, AESSBOX8W,
     ]
 }
 
 pub mod add;
 pub mod addi;
+pub mod aes_sbox8w;
 pub mod and;
 pub mod andi;
 pub mod andn;

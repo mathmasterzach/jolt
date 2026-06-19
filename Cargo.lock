@@ -60,6 +60,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "aes"
+version = "0.1.0"
+dependencies = [
+ "aes-guest",
+ "jolt-inlines-aes",
+ "jolt-sdk",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "aes-guest"
+version = "0.1.0"
+dependencies = [
+ "jolt-inlines-aes",
+ "jolt-sdk",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"

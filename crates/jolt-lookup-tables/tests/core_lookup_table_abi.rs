@@ -195,6 +195,10 @@ fn modular_lookup_table_indices_match_core_abi() {
             LookupTableKind::<XLEN>::VirtualXORROTW7(Default::default()).index(),
             core_index(CoreLookupTables::<XLEN>::VirtualXORROTW7(Default::default())),
         ),
+        (
+            LookupTableKind::<XLEN>::AESSBOX8W(Default::default()).index(),
+            core_index(CoreLookupTables::<XLEN>::AESSBOX8W(Default::default())),
+        ),
     ];
 
     assert_eq!(CoreLookupTables::<XLEN>::COUNT, cases.len());

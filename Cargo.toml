@@ -57,6 +57,8 @@ members = [
   "jolt-inlines/grumpkin",
   "jolt-inlines/p256",
   "jolt-inlines/aes",
+  "examples/aes",
+  "examples/aes/guest",
   "examples/btreemap/host",
   "examples/btreemap/guest",
   "examples/collatz",

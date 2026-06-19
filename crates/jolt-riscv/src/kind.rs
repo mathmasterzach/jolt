@@ -445,6 +445,9 @@ macro_rules! source_extension_for_marker {
     (VirtualXorRotW7) => {
         Some(SourceExtension::JoltCustom)
     };
+    (AesSbox8W) => {
+        Some(SourceExtension::JoltCustom)
+    };
 }
 
 macro_rules! source_side_effects_for_marker {
@@ -856,6 +859,9 @@ macro_rules! source_side_effects_for_marker {
     (VirtualXorRotW7) => {
         false
     };
+    (AesSbox8W) => {
+        false
+    };
 }
 
 macro_rules! jolt_target_extension_for_marker {
@@ -1060,6 +1066,9 @@ macro_rules! jolt_target_extension_for_marker {
     (VirtualXorRotW7) => {
         Some(JoltTargetExtension::BitManipulation)
     };
+    (AesSbox8W) => {
+        Some(JoltTargetExtension::BitManipulation) // TO DO, swap to AES custom extension
+    };
 }
 
 macro_rules! jolt_side_effects_for_marker {
@@ -1262,6 +1271,9 @@ macro_rules! jolt_side_effects_for_marker {
         false
     };
     (VirtualXorRotW7) => {
+        false
+    };
+    (AesSbox8W) => {
         false
     };
 }
