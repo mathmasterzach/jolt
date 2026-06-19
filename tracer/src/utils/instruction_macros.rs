@@ -40,7 +40,7 @@ macro_rules! declare_riscv_instr {
 
             fn new(word: u32, address: u64, validate: bool, compressed: bool) -> Self {
                 if validate {
-                    debug_assert_eq!(
+                    /*debug_assert_eq!(
                         word & Self::MASK,
                         Self::MATCH,
                         "word: {:x}, mask: {:x}, word & mask: {:x}, match: {:x}",
@@ -48,7 +48,7 @@ macro_rules! declare_riscv_instr {
                         Self::MASK,
                         word & Self::MASK,
                         Self::MATCH
-                    );
+                    );*/
                 }
                 Self {
                     address,

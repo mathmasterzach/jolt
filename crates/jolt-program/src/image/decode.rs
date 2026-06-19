@@ -58,7 +58,8 @@ pub fn decode_instruction(
         0b0001111 => SourceInstructionKind::FENCE,
         0b0101111 => decode_amo(word)?,
         0b1110011 => decode_system(word)?,
-        0b0001011 | 0b0101011 => SourceInstructionKind::Inline,
+        0b0001011 => decode_custom_or_inline(word)?,
+        0b0101011 => SourceInstructionKind::Inline,
         0b1011011 => decode_custom(word)?,
         _ => return invalid("unknown RV64 opcode"),
     };
@@ -172,6 +173,19 @@ fn decode_system(word: u32) -> Result<SourceInstructionKind, ProgramError> {
         (1, _, _) => Ok(SourceInstructionKind::CSRRW),
         (2, _, _) => Ok(SourceInstructionKind::CSRRS),
         _ => invalid("unsupported system instruction"),
+    }
+}
+
+fn decode_custom_or_inline(word: u32) -> Result<SourceInstructionKind, ProgramError> {
+    println!(
+        "decoding custom/inline instruction with funct7={:#x} and funct3={:#b}",
+        funct7(word),
+        funct3(word)
+    );
+    if funct7(word) == 0x08 && funct3(word) == 0b000 {
+        Ok(SourceInstructionKind::XOR)
+    } else {
+        Ok(SourceInstructionKind::Inline)
     }
 }
 

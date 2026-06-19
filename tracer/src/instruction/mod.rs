@@ -1191,7 +1191,15 @@ impl Instruction {
             // funct7:
             // - 0x00: SHA256
             // - 0x01: Keccak256
-            0b0001011 => Ok(INLINE::new(instr, address, false, compressed).into()),
+            0b0001011 => {
+                let funct7 = (instr >> 25) & 0x7f;
+                let funct3 = (instr >> 12) & 0x7;
+                if funct7 == 0x08 && funct3 == 0b000 {
+                    Ok(XOR::new(instr, address, true, compressed).into())
+                } else {
+                    Ok(INLINE::new(instr, address, false, compressed).into())
+                }
+            }
             // 0x2B is reserved for external inlines
             0b0101011 => Ok(INLINE::new(instr, address, false, compressed).into()),
             // 0x5B is reserved for custom/virtual instructions.

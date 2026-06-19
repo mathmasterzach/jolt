@@ -60,6 +60,8 @@ members = [
   "examples/btreemap/guest",
   "examples/collatz",
   "examples/collatz/guest",
+  "examples/custominst",
+  "examples/custominst/guest",
   "examples/fibonacci",
   "examples/fibonacci/guest",
   "examples/secp256k1-ecdsa-verify",

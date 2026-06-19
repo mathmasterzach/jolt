@@ -1683,6 +1683,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "custominst"
+version = "0.1.0"
+dependencies = [
+ "custominst-guest",
+ "jolt-sdk",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "custominst-guest"
+version = "0.1.0"
+dependencies = [
+ "jolt-sdk",
+]
+
+[[package]]
 name = "darling"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
