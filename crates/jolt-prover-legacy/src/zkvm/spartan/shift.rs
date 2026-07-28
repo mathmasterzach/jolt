@@ -7,7 +7,10 @@ use itertools::chain;
 use tracer::instruction::Cycle;
 
 use crate::field::JoltField;
-use crate::poly::eq_plus_one_poly::{EqPlusOnePolynomial, EqPlusOnePrefixSuffixPoly};
+use crate::poly::eq_plus_one_poly::{
+    EqMinusOnePolynomial, EqMinusOnePrefixSuffixPoly, EqPlusOnePolynomial,
+    EqPlusOnePrefixSuffixPoly,
+};
 use crate::poly::eq_poly::EqPolynomial;
 use crate::poly::multilinear_polynomial::{
     BindingOrder, MultilinearPolynomial, PolynomialBinding, PolynomialEvaluation,
@@ -56,7 +59,7 @@ const DEGREE_BOUND: usize = 2;
 
 #[derive(Allocative, Clone)]
 pub struct ShiftSumcheckParams<F: JoltField> {
-    pub gamma_powers: [F; 5],
+    pub gamma_powers: [F; 6],
     pub n_cycle_vars: usize, // = log(T)
     pub r_outer: OpeningPoint<BIG_ENDIAN, F>,
     pub r_product: OpeningPoint<BIG_ENDIAN, F>,
@@ -68,7 +71,7 @@ impl<F: JoltField> ShiftSumcheckParams<F> {
         opening_accumulator: &dyn OpeningAccumulator<F>,
         transcript: &mut impl Transcript,
     ) -> Self {
-        let gamma_powers = transcript.challenge_scalar_powers(5).try_into().unwrap();
+        let gamma_powers = transcript.challenge_scalar_powers(6).try_into().unwrap();
         let (outer_sumcheck_r, _) = opening_accumulator
             .get_virtual_polynomial_opening(VirtualPolynomial::NextPC, SumcheckId::SpartanOuter);
         let (r_outer, _rx_var) = outer_sumcheck_r.split_at(n_cycle_vars);
@@ -116,12 +119,18 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
             VirtualPolynomial::NextIsNoop,
             SumcheckId::SpartanProductVirtualization,
         );
+        let (_, input_claim_prev_right_lookup_high_word) = accumulator
+            .get_virtual_polynomial_opening(
+                VirtualPolynomial::PrevRightLookupHighWord,
+                SumcheckId::SpartanOuter,
+            );
 
         input_claim_next_unexpanded_pc
             + input_claim_next_pc * self.gamma_powers[1]
             + input_claim_next_is_virtual * self.gamma_powers[2]
             + input_claim_next_is_first_in_sequence * self.gamma_powers[3]
-            + (F::one() - input_claim_next_is_noop) * self.gamma_powers[4]
+            + input_claim_prev_right_lookup_high_word * self.gamma_powers[4]
+            + (F::one() - input_claim_next_is_noop) * self.gamma_powers[5]
     }
 
     fn normalize_opening_point(
@@ -144,6 +153,10 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
             VirtualPolynomial::NextIsFirstInSequence,
             SumcheckId::SpartanOuter,
         );
+        let prev_right_lookup_high_word = OpeningId::virt(
+            VirtualPolynomial::PrevRightLookupHighWord,
+            SumcheckId::SpartanOuter,
+        );
         let next_is_noop = OpeningId::virt(
             VirtualPolynomial::NextIsNoop,
             SumcheckId::SpartanProductVirtualization,
@@ -163,11 +176,15 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
                 ValueSource::Challenge(2),
                 vec![ValueSource::Opening(next_is_first_in_sequence)],
             ),
-            ProductTerm::single(ValueSource::Challenge(3)), // gamma[4] constant term
             ProductTerm::scaled(
-                ValueSource::Challenge(4),
+                ValueSource::Challenge(3),
+                vec![ValueSource::Opening(prev_right_lookup_high_word)],
+            ),
+            ProductTerm::single(ValueSource::Challenge(4)), // gamma[5] constant term
+            ProductTerm::scaled(
+                ValueSource::Challenge(5),
                 vec![ValueSource::Opening(next_is_noop)],
-            ), // -gamma[4] * next_is_noop
+            ), // -gamma[5] * next_is_noop
         ];
         InputClaimConstraint::sum_of_products(terms)
     }
@@ -179,7 +196,8 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
             self.gamma_powers[2],
             self.gamma_powers[3],
             self.gamma_powers[4],
-            -self.gamma_powers[4],
+            self.gamma_powers[5],
+            -self.gamma_powers[5],
         ]
     }
 
@@ -194,6 +212,10 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
         );
         let is_first_in_sequence = OpeningId::virt(
             VirtualPolynomial::OpFlags(CircuitFlags::IsFirstInSequence),
+            SumcheckId::SpartanShift,
+        );
+        let right_lookup_high_word = OpeningId::virt(
+            VirtualPolynomial::RightLookupHighWord,
             SumcheckId::SpartanShift,
         );
         let is_noop = OpeningId::virt(
@@ -215,9 +237,13 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
                 ValueSource::Challenge(3),
                 vec![ValueSource::Opening(is_first_in_sequence)],
             ),
-            ProductTerm::single(ValueSource::Challenge(4)),
             ProductTerm::scaled(
-                ValueSource::Challenge(5),
+                ValueSource::Challenge(4),
+                vec![ValueSource::Opening(right_lookup_high_word)],
+            ),
+            ProductTerm::single(ValueSource::Challenge(5)),
+            ProductTerm::scaled(
+                ValueSource::Challenge(6),
                 vec![ValueSource::Opening(is_noop)],
             ),
         ];
@@ -230,6 +256,8 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
         let r = normalize_opening_point::<F>(sumcheck_challenges);
         let eq_plus_one_outer =
             EqPlusOnePolynomial::<F>::new(self.r_outer.r.to_vec()).evaluate(&r.r);
+        let eq_minus_one_outer =
+            EqMinusOnePolynomial::<F>::new(self.r_outer.r.to_vec()).evaluate(&r.r);
         let eq_plus_one_product =
             EqPlusOnePolynomial::<F>::new(self.r_product.r.to_vec()).evaluate(&r.r);
 
@@ -240,8 +268,9 @@ impl<F: JoltField> SumcheckInstanceParams<F> for ShiftSumcheckParams<F> {
             gamma_powers[1] * eq_plus_one_outer,
             gamma_powers[2] * eq_plus_one_outer,
             gamma_powers[3] * eq_plus_one_outer,
-            gamma_powers[4] * eq_plus_one_product,
-            -gamma_powers[4] * eq_plus_one_product,
+            gamma_powers[4] * eq_minus_one_outer,
+            gamma_powers[5] * eq_plus_one_product,
+            -gamma_powers[5] * eq_plus_one_product,
         ]
     }
 }
@@ -330,6 +359,7 @@ impl<F: JoltField, T: Transcript> SumcheckInstanceProver<F, T> for ShiftSumcheck
         let pc_eval = state.pc_poly.final_sumcheck_claim();
         let is_virtual_eval = state.is_virtual_poly.final_sumcheck_claim();
         let is_first_in_sequence_eval = state.is_first_in_sequence_poly.final_sumcheck_claim();
+        let right_lookup_high_word_eval = state.right_lookup_high_word_poly.final_sumcheck_claim();
         let is_noop_eval = state.is_noop_poly.final_sumcheck_claim();
 
         let opening_point = normalize_opening_point(sumcheck_challenges);
@@ -356,6 +386,12 @@ impl<F: JoltField, T: Transcript> SumcheckInstanceProver<F, T> for ShiftSumcheck
             SumcheckId::SpartanShift,
             opening_point.clone(),
             is_first_in_sequence_eval,
+        );
+        accumulator.append_virtual(
+            VirtualPolynomial::RightLookupHighWord,
+            SumcheckId::SpartanShift,
+            opening_point.clone(),
+            right_lookup_high_word_eval,
         );
         accumulator.append_virtual(
             VirtualPolynomial::InstructionFlags(InstructionFlags::IsNoop),
@@ -424,6 +460,10 @@ impl<F: JoltField, T: Transcript, A: AbstractVerifierOpeningAccumulator<F>>
             VirtualPolynomial::OpFlags(CircuitFlags::IsFirstInSequence),
             SumcheckId::SpartanShift,
         );
+        let (_, right_lookup_high_word_claim) = accumulator.get_virtual_polynomial_opening(
+            VirtualPolynomial::RightLookupHighWord,
+            SumcheckId::SpartanShift,
+        );
         let (_, is_noop_claim) = accumulator.get_virtual_polynomial_opening(
             VirtualPolynomial::InstructionFlags(InstructionFlags::IsNoop),
             SumcheckId::SpartanShift,
@@ -431,6 +471,8 @@ impl<F: JoltField, T: Transcript, A: AbstractVerifierOpeningAccumulator<F>>
 
         let eq_plus_one_r_outer_at_shift =
             EqPlusOnePolynomial::<F>::new(self.params.r_outer.r.to_vec()).evaluate(&r.r);
+        let eq_minus_one_r_outer_at_shift =
+            EqMinusOnePolynomial::<F>::new(self.params.r_outer.r.to_vec()).evaluate(&r.r);
         let eq_plus_one_r_product_at_shift =
             EqPlusOnePolynomial::<F>::new(self.params.r_product.r.to_vec()).evaluate(&r.r);
 
@@ -446,6 +488,9 @@ impl<F: JoltField, T: Transcript, A: AbstractVerifierOpeningAccumulator<F>>
         .sum::<F>()
             * eq_plus_one_r_outer_at_shift
             + self.params.gamma_powers[4]
+                * right_lookup_high_word_claim
+                * eq_minus_one_r_outer_at_shift
+            + self.params.gamma_powers[5]
                 * (F::one() - is_noop_claim)
                 * eq_plus_one_r_product_at_shift;
 
@@ -490,6 +535,11 @@ impl<F: JoltField, T: Transcript, A: AbstractVerifierOpeningAccumulator<F>>
             opening_point.clone(),
         );
         accumulator.append_virtual(
+            VirtualPolynomial::RightLookupHighWord,
+            SumcheckId::SpartanShift,
+            opening_point.clone(),
+        );
+        accumulator.append_virtual(
             VirtualPolynomial::InstructionFlags(InstructionFlags::IsNoop),
             SumcheckId::SpartanShift,
             opening_point,
@@ -504,6 +554,8 @@ impl<F: JoltField> SumcheckFrontend<F> for ShiftSumcheckVerifier<F> {
         let next_is_virtual: ClaimExpr<F> = VirtualPolynomial::NextIsVirtual.into();
         let next_is_first_in_sequence: ClaimExpr<F> =
             VirtualPolynomial::NextIsFirstInSequence.into();
+        let prev_right_lookup_high_word: ClaimExpr<F> =
+            VirtualPolynomial::PrevRightLookupHighWord.into();
         let next_is_noop: ClaimExpr<F> = VirtualPolynomial::NextIsNoop.into();
 
         let unexpanded_pc: ClaimExpr<F> = VirtualPolynomial::UnexpandedPC.into();
@@ -512,6 +564,7 @@ impl<F: JoltField> SumcheckFrontend<F> for ShiftSumcheckVerifier<F> {
             VirtualPolynomial::OpFlags(CircuitFlags::VirtualInstruction).into();
         let is_first_in_sequence: ClaimExpr<F> =
             VirtualPolynomial::OpFlags(CircuitFlags::IsFirstInSequence).into();
+        let right_lookup_high_word: ClaimExpr<F> = VirtualPolynomial::RightLookupHighWord.into();
         let is_noop: ClaimExpr<F> =
             VirtualPolynomial::InstructionFlags(InstructionFlags::IsNoop).into();
 
@@ -523,6 +576,11 @@ impl<F: JoltField> SumcheckFrontend<F> for ShiftSumcheckVerifier<F> {
         let product_sumcheck_r = VerifierEvaluablePolynomial::EqPlusOne(CachedPointRef {
             opening: PolynomialId::Virtual(VirtualPolynomial::NextIsNoop),
             sumcheck: SumcheckId::SpartanProductVirtualization,
+            part: ChallengePart::Cycle,
+        });
+        let prev_outer_sumcheck_r = VerifierEvaluablePolynomial::EqMinusOne(CachedPointRef {
+            opening: PolynomialId::Virtual(VirtualPolynomial::NextPC),
+            sumcheck: SumcheckId::SpartanOuter,
             part: ChallengePart::Cycle,
         });
 
@@ -551,6 +609,12 @@ impl<F: JoltField> SumcheckFrontend<F> for ShiftSumcheckVerifier<F> {
                     input_claim_expr: next_is_first_in_sequence,
                     batching_poly: outer_sumcheck_r,
                     expected_output_claim_expr: is_first_in_sequence,
+                },
+                Claim {
+                    input_sumcheck_id: SumcheckId::SpartanOuter,
+                    input_claim_expr: prev_right_lookup_high_word,
+                    batching_poly: prev_outer_sumcheck_r,
+                    expected_output_claim_expr: right_lookup_high_word,
                 },
                 Claim {
                     input_sumcheck_id: SumcheckId::SpartanProductVirtualization,
@@ -597,6 +661,12 @@ impl<F: JoltField> Phase1State<F> {
             prefix_1: prefix_1_for_r_prod,
             suffix_1: suffix_1_for_r_prod,
         } = EqPlusOnePrefixSuffixPoly::new(&params.r_product);
+        let EqMinusOnePrefixSuffixPoly {
+            prefix_0: prefix_0_for_prev_r_outer,
+            suffix_0: suffix_0_for_prev_r_outer,
+            prefix_1: prefix_1_for_prev_r_outer,
+            suffix_1: suffix_1_for_prev_r_outer,
+        } = EqMinusOnePrefixSuffixPoly::new(&params.r_outer);
 
         let prefix_n_vars = prefix_0_for_r_outer.len().ilog2();
         let suffix_n_vars = suffix_0_for_r_outer.len().ilog2();
@@ -607,10 +677,14 @@ impl<F: JoltField> Phase1State<F> {
         let P_1_for_r_outer = prefix_1_for_r_outer;
         let P_0_for_r_prod = prefix_0_for_r_prod;
         let P_1_for_r_prod = prefix_1_for_r_prod;
+        let P_0_for_prev_r_outer = prefix_0_for_prev_r_outer;
+        let P_1_for_prev_r_outer = prefix_1_for_prev_r_outer;
         let mut Q_0_for_r_outer = vec![F::zero(); 1 << prefix_n_vars];
         let mut Q_1_for_r_outer = vec![F::zero(); 1 << prefix_n_vars];
         let mut Q_0_for_r_prod = vec![F::zero(); 1 << prefix_n_vars];
         let mut Q_1_for_r_prod = vec![F::zero(); 1 << prefix_n_vars];
+        let mut Q_0_for_prev_r_outer = vec![F::zero(); 1 << prefix_n_vars];
+        let mut Q_1_for_prev_r_outer = vec![F::zero(); 1 << prefix_n_vars];
 
         const BLOCK_SIZE: usize = 32;
         (
@@ -618,6 +692,8 @@ impl<F: JoltField> Phase1State<F> {
             Q_1_for_r_outer.par_chunks_mut(BLOCK_SIZE),
             Q_0_for_r_prod.par_chunks_mut(BLOCK_SIZE),
             Q_1_for_r_prod.par_chunks_mut(BLOCK_SIZE),
+            Q_0_for_prev_r_outer.par_chunks_mut(BLOCK_SIZE),
+            Q_1_for_prev_r_outer.par_chunks_mut(BLOCK_SIZE),
         )
             .into_par_iter()
             .enumerate()
@@ -629,6 +705,8 @@ impl<F: JoltField> Phase1State<F> {
                         Q_1_for_r_outer_chunk,
                         Q_0_for_r_prod_chunk,
                         Q_1_for_r_prod_chunk,
+                        Q_0_for_prev_r_outer_chunk,
+                        Q_1_for_prev_r_outer_chunk,
                     ),
                 )| {
                     let chunk_len = Q_0_for_r_outer_chunk.len();
@@ -638,6 +716,10 @@ impl<F: JoltField> Phase1State<F> {
                         [F::UnreducedProductAccum::zero(); BLOCK_SIZE];
                     let mut Q_0_for_r_prod_unreduced = [F::UnreducedMulU64::zero(); BLOCK_SIZE];
                     let mut Q_1_for_r_prod_unreduced = [F::UnreducedMulU64::zero(); BLOCK_SIZE];
+                    let mut Q_0_for_prev_r_outer_unreduced =
+                        [F::UnreducedProductAccum::zero(); BLOCK_SIZE];
+                    let mut Q_1_for_prev_r_outer_unreduced =
+                        [F::UnreducedProductAccum::zero(); BLOCK_SIZE];
 
                     for x_hi in 0..1 << suffix_n_vars {
                         for i in 0..chunk_len {
@@ -648,6 +730,7 @@ impl<F: JoltField> Phase1State<F> {
                                 pc,
                                 is_virtual,
                                 is_first_in_sequence,
+                                right_lookup_high_word,
                                 is_noop,
                             } = ShiftSumcheckCycleState::new(&trace[x], bytecode_preprocessing);
 
@@ -671,6 +754,13 @@ impl<F: JoltField> Phase1State<F> {
                                 Q_1_for_r_prod_unreduced[i] +=
                                     suffix_1_for_r_prod[x_hi].to_unreduced();
                             }
+
+                            Q_0_for_prev_r_outer_unreduced[i] += (params.gamma_powers[4]
+                                * F::from_u64(right_lookup_high_word))
+                            .mul_to_product_accum(suffix_0_for_prev_r_outer[x_hi]);
+                            Q_1_for_prev_r_outer_unreduced[i] += (params.gamma_powers[4]
+                                * F::from_u64(right_lookup_high_word))
+                            .mul_to_product_accum(suffix_1_for_prev_r_outer[x_hi]);
                         }
                     }
 
@@ -681,15 +771,21 @@ impl<F: JoltField> Phase1State<F> {
                             F::reduce_product_accum(Q_1_for_r_outer_unreduced[i]);
                         Q_0_for_r_prod_chunk[i] = F::reduce_mul_u64(Q_0_for_r_prod_unreduced[i]);
                         Q_1_for_r_prod_chunk[i] = F::reduce_mul_u64(Q_1_for_r_prod_unreduced[i]);
+                        Q_0_for_prev_r_outer_chunk[i] =
+                            F::reduce_product_accum(Q_0_for_prev_r_outer_unreduced[i]);
+                        Q_1_for_prev_r_outer_chunk[i] =
+                            F::reduce_product_accum(Q_1_for_prev_r_outer_unreduced[i]);
                     }
                 },
             );
 
-        chain!(&mut Q_0_for_r_prod, &mut Q_1_for_r_prod).for_each(|v| *v *= params.gamma_powers[4]);
+        chain!(&mut Q_0_for_r_prod, &mut Q_1_for_r_prod).for_each(|v| *v *= params.gamma_powers[5]);
 
         let prefix_suffix_pairs = vec![
             (P_0_for_r_outer.into(), Q_0_for_r_outer.into()),
             (P_1_for_r_outer.into(), Q_1_for_r_outer.into()),
+            (P_0_for_prev_r_outer.into(), Q_0_for_prev_r_outer.into()),
+            (P_1_for_prev_r_outer.into(), Q_1_for_prev_r_outer.into()),
             (P_0_for_r_prod.into(), Q_0_for_r_prod.into()),
             (P_1_for_r_prod.into(), Q_1_for_r_prod.into()),
         ];
@@ -746,8 +842,10 @@ struct Phase2State<F: JoltField> {
     pc_poly: MultilinearPolynomial<F>,
     is_virtual_poly: MultilinearPolynomial<F>,
     is_first_in_sequence_poly: MultilinearPolynomial<F>,
+    right_lookup_high_word_poly: MultilinearPolynomial<F>,
     is_noop_poly: MultilinearPolynomial<F>,
     eq_plus_one_r_outer: MultilinearPolynomial<F>,
+    eq_minus_one_r_outer: MultilinearPolynomial<F>,
     eq_plus_one_r_product: MultilinearPolynomial<F>,
 }
 
@@ -775,6 +873,18 @@ impl<F: JoltField> Phase2State<F> {
             .map(|i| prefix_0_eval * suffix_0[i] + prefix_1_eval * suffix_1[i])
             .collect::<Vec<F>>()
             .into();
+        let EqMinusOnePrefixSuffixPoly {
+            prefix_0,
+            suffix_0,
+            prefix_1,
+            suffix_1,
+        } = EqMinusOnePrefixSuffixPoly::new(&params.r_outer);
+        let prefix_0_eval = MultilinearPolynomial::from(prefix_0).evaluate(&r_prefix.r);
+        let prefix_1_eval = MultilinearPolynomial::from(prefix_1).evaluate(&r_prefix.r);
+        let eq_minus_one_r_outer: MultilinearPolynomial<F> = (0..suffix_0.len())
+            .map(|i| prefix_0_eval * suffix_0[i] + prefix_1_eval * suffix_1[i])
+            .collect::<Vec<F>>()
+            .into();
 
         // Gen eq+1(r_product, (r_prefix, j)) for all j.
         let EqPlusOnePrefixSuffixPoly {
@@ -796,12 +906,14 @@ impl<F: JoltField> Phase2State<F> {
         let mut pc_poly = vec![F::zero(); 1 << n_remaining_rounds];
         let mut is_virtual_poly = vec![F::zero(); 1 << n_remaining_rounds];
         let mut is_first_in_sequence_poly = vec![F::zero(); 1 << n_remaining_rounds];
+        let mut right_lookup_high_word_poly = vec![F::zero(); 1 << n_remaining_rounds];
         let mut is_noop_poly = vec![F::zero(); 1 << n_remaining_rounds];
         (
             &mut unexpanded_pc_poly,
             &mut pc_poly,
             &mut is_virtual_poly,
             &mut is_first_in_sequence_poly,
+            &mut right_lookup_high_word_poly,
             &mut is_noop_poly,
             trace.par_chunks(eq_evals.len()),
         )
@@ -812,6 +924,7 @@ impl<F: JoltField> Phase2State<F> {
                     pc_eval,
                     is_virtual_eval,
                     is_first_in_sequence_eval,
+                    right_lookup_high_word_eval,
                     is_noop_eval,
                     trace_chunk,
                 )| {
@@ -819,6 +932,7 @@ impl<F: JoltField> Phase2State<F> {
                     let mut pc_eval_unreduced = F::UnreducedMulU128::zero();
                     let mut is_virtual_eval_unreduced = F::UnreducedMulU64::zero();
                     let mut is_first_in_sequence_eval_unreduced = F::UnreducedMulU64::zero();
+                    let mut right_lookup_high_word_eval_unreduced = F::UnreducedMulU64::zero();
                     let mut is_noop_eval_unreduced = F::UnreducedMulU64::zero();
 
                     for (i, cycle) in trace_chunk.iter().enumerate() {
@@ -827,6 +941,7 @@ impl<F: JoltField> Phase2State<F> {
                             pc,
                             is_virtual,
                             is_first_in_sequence,
+                            right_lookup_high_word,
                             is_noop,
                         } = ShiftSumcheckCycleState::new(cycle, bytecode_preprocessing);
                         let eq_eval = eq_evals[i];
@@ -838,6 +953,8 @@ impl<F: JoltField> Phase2State<F> {
                         if is_first_in_sequence {
                             is_first_in_sequence_eval_unreduced += eq_eval.to_unreduced();
                         }
+                        right_lookup_high_word_eval_unreduced +=
+                            eq_eval.mul_u64_unreduced(right_lookup_high_word);
                         if is_noop {
                             is_noop_eval_unreduced += eq_eval.to_unreduced();
                         }
@@ -848,6 +965,8 @@ impl<F: JoltField> Phase2State<F> {
                     *is_virtual_eval = F::reduce_mul_u64(is_virtual_eval_unreduced);
                     *is_first_in_sequence_eval =
                         F::reduce_mul_u64(is_first_in_sequence_eval_unreduced);
+                    *right_lookup_high_word_eval =
+                        F::reduce_mul_u64(right_lookup_high_word_eval_unreduced);
                     *is_noop_eval = F::reduce_mul_u64(is_noop_eval_unreduced);
                 },
             );
@@ -857,8 +976,10 @@ impl<F: JoltField> Phase2State<F> {
             pc_poly: pc_poly.into(),
             is_virtual_poly: is_virtual_poly.into(),
             is_first_in_sequence_poly: is_first_in_sequence_poly.into(),
+            right_lookup_high_word_poly: right_lookup_high_word_poly.into(),
             is_noop_poly: is_noop_poly.into(),
             eq_plus_one_r_outer,
+            eq_minus_one_r_outer,
             eq_plus_one_r_product,
         }
     }
@@ -879,11 +1000,17 @@ impl<F: JoltField> Phase2State<F> {
             let is_first_in_sequence_evals = self
                 .is_first_in_sequence_poly
                 .sumcheck_evals_array::<DEGREE_BOUND>(j, BindingOrder::LowToHigh);
+            let right_lookup_high_word_evals = self
+                .right_lookup_high_word_poly
+                .sumcheck_evals_array::<DEGREE_BOUND>(j, BindingOrder::LowToHigh);
             let is_noop_evals = self
                 .is_noop_poly
                 .sumcheck_evals_array::<DEGREE_BOUND>(j, BindingOrder::LowToHigh);
             let eq_plus_one_r_outer_evals = self
                 .eq_plus_one_r_outer
+                .sumcheck_evals_array::<DEGREE_BOUND>(j, BindingOrder::LowToHigh);
+            let eq_minus_one_r_outer_evals = self
+                .eq_minus_one_r_outer
                 .sumcheck_evals_array::<DEGREE_BOUND>(j, BindingOrder::LowToHigh);
             let eq_plus_one_r_product_evals = self
                 .eq_plus_one_r_product
@@ -896,6 +1023,9 @@ impl<F: JoltField> Phase2State<F> {
                             + params.gamma_powers[2] * is_virtual_evals[i]
                             + params.gamma_powers[3] * is_first_in_sequence_evals[i])
                     + params.gamma_powers[4]
+                        * eq_minus_one_r_outer_evals[i]
+                        * right_lookup_high_word_evals[i]
+                    + params.gamma_powers[5]
                         * eq_plus_one_r_product_evals[i]
                         * (F::one() - is_noop_evals[i])
             });
@@ -910,16 +1040,20 @@ impl<F: JoltField> Phase2State<F> {
             pc_poly,
             is_virtual_poly,
             is_first_in_sequence_poly,
+            right_lookup_high_word_poly,
             is_noop_poly,
             eq_plus_one_r_outer,
+            eq_minus_one_r_outer,
             eq_plus_one_r_product,
         } = self;
         unexpanded_pc_poly.bind(r_j, BindingOrder::LowToHigh);
         pc_poly.bind(r_j, BindingOrder::LowToHigh);
         is_virtual_poly.bind(r_j, BindingOrder::LowToHigh);
         is_first_in_sequence_poly.bind(r_j, BindingOrder::LowToHigh);
+        right_lookup_high_word_poly.bind(r_j, BindingOrder::LowToHigh);
         is_noop_poly.bind(r_j, BindingOrder::LowToHigh);
         eq_plus_one_r_outer.bind(r_j, BindingOrder::LowToHigh);
+        eq_minus_one_r_outer.bind(r_j, BindingOrder::LowToHigh);
         eq_plus_one_r_product.bind(r_j, BindingOrder::LowToHigh);
     }
 }

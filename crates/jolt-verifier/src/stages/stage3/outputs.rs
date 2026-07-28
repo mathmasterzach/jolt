@@ -23,7 +23,7 @@ pub use super::spartan_shift::{SpartanShift, SpartanShiftOutputClaims};
 /// The instruction-input virtualization declares one cross-relation opening alias
 /// (`unexpanded_pc` = the shift's) and the register claim-reduction declares two
 /// (`rs1_value`/`rs2_value` = the instruction-input ones), so the generated
-/// `append_output_claims` absorbs 13 of the members' 16 expression-referenced
+/// `append_output_claims` absorbs 14 of the members' 17 expression-referenced
 /// openings (each alias once, via its canonical source), the generated
 /// `output_shape` count/validator use the same wire sets, and the generated
 /// `validate_aliases` (run by `expected_final_claim`) enforces the aliased wire
@@ -125,22 +125,23 @@ mod tests {
                 pc: fr(2),
                 is_virtual: fr(3),
                 is_first_in_sequence: fr(4),
-                is_noop: fr(5),
+                right_lookup_high_word: fr(5),
+                is_noop: fr(6),
             },
             instruction_input: InstructionInputOutputClaims {
-                left_operand_is_rs1: fr(6),
-                rs1_value: fr(7),
-                left_operand_is_pc: fr(8),
+                left_operand_is_rs1: fr(7),
+                rs1_value: fr(8),
+                left_operand_is_pc: fr(9),
                 unexpanded_pc: fr(1),
-                right_operand_is_rs2: fr(9),
-                rs2_value: fr(10),
-                right_operand_is_imm: fr(11),
-                imm: fr(12),
+                right_operand_is_rs2: fr(10),
+                rs2_value: fr(11),
+                right_operand_is_imm: fr(12),
+                imm: fr(13),
             },
             registers_claim_reduction: RegistersClaimReductionOutputClaims {
-                rd_write_value: fr(13),
-                rs1_value: fr(7),
-                rs2_value: fr(10),
+                rd_write_value: fr(14),
+                rs1_value: fr(8),
+                rs2_value: fr(11),
             },
         }
     }
@@ -159,16 +160,16 @@ mod tests {
 
         assert_eq!(
             sumchecks().opening_values(&claims),
-            (1..=13).map(fr).collect::<Vec<_>>()
+            (1..=14).map(fr).collect::<Vec<_>>()
         );
     }
 
-    /// The generated `output_claim_count` sums the members' wire sets: the 16
+    /// The generated `output_claim_count` sums the members' wire sets: the 17
     /// expression-referenced openings minus the 3 aliases.
     #[test]
     fn output_claim_count_matches_absorbed_openings() {
         let sumchecks = sumchecks();
-        assert_eq!(sumchecks.output_claim_count(), 13);
+        assert_eq!(sumchecks.output_claim_count(), 14);
         assert_eq!(
             sumchecks.opening_values(&consistent()).len(),
             sumchecks.output_claim_count(),

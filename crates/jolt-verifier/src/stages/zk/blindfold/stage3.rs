@@ -43,6 +43,8 @@ where
     let product_tau_low = input.stage2.product_tau_low.clone();
     let eq_plus_one_outer =
         EqPlusOnePolynomial::new(product_tau_low.clone()).evaluate(&shift_opening_point);
+    let eq_minus_one_outer =
+        EqPlusOnePolynomial::new(shift_opening_point.clone()).evaluate(&product_tau_low);
     let product_point = input
         .stage2
         .batch_consistency
@@ -56,6 +58,10 @@ where
     values.public(
         JoltDerivedId::from(SpartanShiftPublic::EqPlusOneOuter),
         eq_plus_one_outer,
+    )?;
+    values.public(
+        JoltDerivedId::from(SpartanShiftPublic::EqMinusOneOuter),
+        eq_minus_one_outer,
     )?;
     values.public(
         JoltDerivedId::from(SpartanShiftPublic::EqPlusOneProduct),
@@ -109,6 +115,7 @@ where
         pc: zero,
         is_virtual: zero,
         is_first_in_sequence: zero,
+        right_lookup_high_word: zero,
         is_noop: zero,
     }
     .canonical_order();

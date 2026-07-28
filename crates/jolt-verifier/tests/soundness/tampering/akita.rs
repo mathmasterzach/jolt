@@ -289,6 +289,7 @@ fn visit_stage3<F: Field>(claims: &mut Stage3OutputClaims<F>, f: &mut dyn FnMut(
         pc,
         is_virtual,
         is_first_in_sequence,
+        right_lookup_high_word,
         is_noop,
     } = shift;
     let InstructionInputOutputClaims {
@@ -311,6 +312,7 @@ fn visit_stage3<F: Field>(claims: &mut Stage3OutputClaims<F>, f: &mut dyn FnMut(
         pc,
         is_virtual,
         is_first_in_sequence,
+        right_lookup_high_word,
         is_noop,
         left_operand_is_rs1,
         rs1_value,

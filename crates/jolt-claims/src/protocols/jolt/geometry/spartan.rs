@@ -18,9 +18,9 @@ use super::dimensions::OUTER_UNISKIP_DOMAIN_SIZE;
 pub(crate) const OUTER_REMAINDER_DEGREE: usize = 3;
 pub(crate) const PRODUCT_REMAINDER_DEGREE: usize = 3;
 pub(crate) const SHIFT_DEGREE: usize = 2;
-const SPARTAN_OUTER_RV64_ROW_COUNT: usize = 20;
+const SPARTAN_OUTER_RV64_ROW_COUNT: usize = 21;
 const SPARTAN_OUTER_FIRST_GROUP_ROWS: [usize; OUTER_UNISKIP_DOMAIN_SIZE] =
-    [1, 2, 3, 4, 5, 6, 12, 15, 18, 19];
+    [1, 2, 3, 4, 5, 6, 12, 15, 18, 19, 20];
 const SPARTAN_OUTER_SECOND_GROUP_ROWS: [usize; 10] = [0, 7, 8, 9, 10, 11, 13, 14, 16, 17];
 
 pub const SPARTAN_OUTER_R1CS_INPUTS: [JoltVirtualPolynomial; 38] = [
@@ -436,6 +436,13 @@ pub fn is_first_in_sequence_shift() -> JoltOpeningId {
     )
 }
 
+pub fn right_lookup_high_word_shift() -> JoltOpeningId {
+    JoltOpeningId::virtual_polynomial(
+        JoltVirtualPolynomial::RightLookupHighWord,
+        JoltRelationId::SpartanShift,
+    )
+}
+
 pub fn is_noop_shift() -> JoltOpeningId {
     JoltOpeningId::virtual_polynomial(
         JoltVirtualPolynomial::InstructionFlags(InstructionFlags::IsNoop),
@@ -500,12 +507,12 @@ mod tests {
         let r0 = Fr::from_i64(-4);
 
         let first_group = plan.row_weights(r0, Fr::from_u64(0)).unwrap();
-        assert_eq!(first_group[1], Fr::from_u64(1));
-        assert_eq!(first_group[0], Fr::from_u64(0));
+        assert_eq!(first_group[2], Fr::from_u64(1));
+        assert_eq!(first_group[1], Fr::from_u64(0));
 
         let second_group = plan.row_weights(r0, Fr::from_u64(1)).unwrap();
-        assert_eq!(second_group[0], Fr::from_u64(1));
-        assert_eq!(second_group[1], Fr::from_u64(0));
+        assert_eq!(second_group[7], Fr::from_u64(1));
+        assert_eq!(second_group[0], Fr::from_u64(0));
     }
 
     #[test]

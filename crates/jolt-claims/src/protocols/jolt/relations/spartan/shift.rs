@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::protocols::jolt::geometry::spartan::{
     is_first_in_sequence_shift, is_noop_shift, is_virtual_shift, next_is_first_in_sequence_outer,
-    next_is_noop_product, next_is_virtual_outer, next_pc_outer, next_unexpanded_pc_outer, pc_shift,
-    unexpanded_pc_shift, SHIFT_DEGREE,
+    next_is_noop_product, next_is_virtual_outer, next_pc_outer, next_unexpanded_pc_outer,
+    outer_opening, pc_shift, unexpanded_pc_shift, SHIFT_DEGREE,
 };
 use crate::protocols::jolt::{
     JoltExpr, JoltRelationId, SpartanShiftChallenge, SpartanShiftPublic, TraceDimensions,
@@ -34,6 +34,8 @@ pub struct SpartanShiftOutputClaims<C> {
     pub is_virtual: C,
     #[opening(OpFlags(CircuitFlags::IsFirstInSequence))]
     pub is_first_in_sequence: C,
+    #[opening(RightLookupHighWord)]
+    pub right_lookup_high_word: C,
     #[opening(InstructionFlags(InstructionFlags::IsNoop))]
     pub is_noop: C,
 }
@@ -51,6 +53,8 @@ pub struct SpartanShiftInputClaims<C> {
     pub next_is_virtual: C,
     #[opening(NextIsFirstInSequence, from = SpartanOuter)]
     pub next_is_first_in_sequence: C,
+    #[opening(PrevRightLookupHighWord, from = SpartanOuter)]
+    pub prev_right_lookup_high_word: C,
     #[opening(NextIsNoop, from = SpartanProductVirtualization)]
     pub next_is_noop: C,
 }
@@ -102,7 +106,11 @@ impl SymbolicSumcheck for Shift {
             + gamma.clone() * opening(next_pc_outer())
             + gamma.clone().pow(2) * opening(next_is_virtual_outer())
             + gamma.clone().pow(3) * opening(next_is_first_in_sequence_outer())
-            + gamma.pow(4) * (JoltExpr::one() - opening(next_is_noop_product()))
+            + gamma.clone().pow(4)
+                * opening(outer_opening(
+                    crate::protocols::jolt::JoltVirtualPolynomial::PrevRightLookupHighWord,
+                ))
+            + gamma.pow(5) * (JoltExpr::one() - opening(next_is_noop_product()))
     }
 
     fn output_expression<F: RingCore>(&self) -> JoltExpr<F> {
@@ -112,8 +120,11 @@ impl SymbolicSumcheck for Shift {
                 + gamma.clone() * opening(pc_shift())
                 + gamma.clone().pow(2) * opening(is_virtual_shift())
                 + gamma.clone().pow(3) * opening(is_first_in_sequence_shift()))
+            + derived(SpartanShiftPublic::EqMinusOneOuter)
+                * gamma.clone().pow(4)
+                * opening(crate::protocols::jolt::geometry::spartan::right_lookup_high_word_shift())
             + derived(SpartanShiftPublic::EqPlusOneProduct)
-                * gamma.pow(4)
+                * gamma.pow(5)
                 * (JoltExpr::one() - opening(is_noop_shift()))
     }
 }
@@ -141,14 +152,17 @@ mod tests {
         let next_virtual = Fr::from_u64(7);
         let next_first = Fr::from_u64(11);
         let next_noop = Fr::from_u64(13);
+        let prev_right_lookup_high_word = Fr::from_u64(17);
         let unexpanded_pc = Fr::from_u64(17);
         let pc = Fr::from_u64(19);
         let is_virtual = Fr::from_u64(23);
         let is_first = Fr::from_u64(29);
+        let right_lookup_high_word = Fr::from_u64(31);
         let is_noop = Fr::from_u64(31);
         let gamma = Fr::from_u64(37);
         let eq_outer = Fr::from_u64(41);
-        let eq_product = Fr::from_u64(43);
+        let eq_prev = Fr::from_u64(43);
+        let eq_product = Fr::from_u64(47);
         let zero = Fr::from_u64(0);
 
         let input = relation.input_expression::<Fr>().evaluate(
@@ -157,6 +171,13 @@ mod tests {
                 id if id == next_pc_outer() => next_pc,
                 id if id == next_is_virtual_outer() => next_virtual,
                 id if id == next_is_first_in_sequence_outer() => next_first,
+                id if id
+                    == outer_opening(
+                        crate::protocols::jolt::JoltVirtualPolynomial::PrevRightLookupHighWord,
+                    ) =>
+                {
+                    prev_right_lookup_high_word
+                }
                 id if id == next_is_noop_product() => next_noop,
                 _ => zero,
             },
@@ -172,6 +193,12 @@ mod tests {
                 id if id == pc_shift() => pc,
                 id if id == is_virtual_shift() => is_virtual,
                 id if id == is_first_in_sequence_shift() => is_first,
+                id if id
+                    == crate::protocols::jolt::geometry::spartan::right_lookup_high_word_shift(
+                    ) =>
+                {
+                    right_lookup_high_word
+                }
                 id if id == is_noop_shift() => is_noop,
                 _ => zero,
             },
@@ -181,6 +208,7 @@ mod tests {
             },
             |id| match *id {
                 JoltDerivedId::SpartanShift(SpartanShiftPublic::EqPlusOneOuter) => eq_outer,
+                JoltDerivedId::SpartanShift(SpartanShiftPublic::EqMinusOneOuter) => eq_prev,
                 JoltDerivedId::SpartanShift(SpartanShiftPublic::EqPlusOneProduct) => eq_product,
                 _ => zero,
             },
@@ -192,7 +220,8 @@ mod tests {
                 + gamma * next_pc
                 + gamma_power(gamma, 2) * next_virtual
                 + gamma_power(gamma, 3) * next_first
-                + gamma_power(gamma, 4) * (Fr::from_u64(1) - next_noop)
+                + gamma_power(gamma, 4) * prev_right_lookup_high_word
+                + gamma_power(gamma, 5) * (Fr::from_u64(1) - next_noop)
         );
         assert_eq!(
             output,
@@ -201,7 +230,8 @@ mod tests {
                     + gamma * pc
                     + gamma_power(gamma, 2) * is_virtual
                     + gamma_power(gamma, 3) * is_first)
-                + eq_product * gamma_power(gamma, 4) * (Fr::from_u64(1) - is_noop)
+                + eq_prev * gamma_power(gamma, 4) * right_lookup_high_word
+                + eq_product * gamma_power(gamma, 5) * (Fr::from_u64(1) - is_noop)
         );
     }
 

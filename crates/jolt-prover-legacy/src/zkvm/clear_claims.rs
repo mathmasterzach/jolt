@@ -213,6 +213,7 @@ fn stage3_claims_from_openings<F: Field>(
         pc: claims.require(spartan::pc_shift())?,
         is_virtual: claims.require(spartan::is_virtual_shift())?,
         is_first_in_sequence: claims.require(spartan::is_first_in_sequence_shift())?,
+        right_lookup_high_word: claims.require(spartan::right_lookup_high_word_shift())?,
         is_noop: claims.require(spartan::is_noop_shift())?,
     };
     let instruction_input = InstructionInputOutputClaims {

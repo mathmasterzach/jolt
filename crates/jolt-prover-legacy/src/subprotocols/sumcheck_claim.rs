@@ -97,6 +97,7 @@ impl VerifierEvaluationParams {
 pub enum VerifierEvaluablePolynomial {
     Eq(CachedPointRef),
     EqPlusOne(CachedPointRef),
+    EqMinusOne(CachedPointRef),
     Lt(CachedPointRef),
     Identity,
     // RAM address unmapping needs layout parameters in addition to the challenge point.
@@ -119,6 +120,10 @@ impl VerifierEvaluablePolynomial {
             VerifierEvaluablePolynomial::EqPlusOne(point_ref) => {
                 let tau = point_ref.get_point(r.len(), acc);
                 EqPlusOnePolynomial::new(tau.r).evaluate(&r.r)
+            }
+            VerifierEvaluablePolynomial::EqMinusOne(point_ref) => {
+                let tau = point_ref.get_point(r.len(), acc);
+                EqPlusOnePolynomial::new(r.r.clone()).evaluate(&tau.r)
             }
             VerifierEvaluablePolynomial::Lt(_opening_ref) => todo!(),
             VerifierEvaluablePolynomial::Identity => todo!(),

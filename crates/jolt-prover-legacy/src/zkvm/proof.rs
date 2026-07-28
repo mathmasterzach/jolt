@@ -759,13 +759,31 @@ fn convert_opening_claims<F>(
 where
     F: ProofField,
 {
-    build_clear_claims(
-        claims.0.into_iter().map(|(id, (_point, claim))| {
+    let claims: Vec<_> = claims
+        .0
+        .into_iter()
+        .map(|(id, (_point, claim))| {
             (
                 convert_opening_id(id),
                 ProofField::into_verifier_field(claim),
             )
-        }),
+        })
+        .collect();
+
+    #[cfg(test)]
+    {
+        use std::collections::BTreeSet;
+
+        let unique_ids: BTreeSet<_> = claims.iter().map(|(id, _)| *id).collect();
+        assert_eq!(
+            unique_ids.len(),
+            claims.len(),
+            "prover opening ids must remain unique after verifier conversion",
+        );
+    }
+
+    build_clear_claims(
+        claims,
         trace_length,
     )
     .expect("standard prover proof must contain all typed clear opening claims")
@@ -972,6 +990,9 @@ fn convert_virtual_polynomial(poly: prover_witness::VirtualPolynomial) -> JoltVi
         prover_witness::VirtualPolynomial::NextIsVirtual => JoltVirtualPolynomial::NextIsVirtual,
         prover_witness::VirtualPolynomial::NextIsFirstInSequence => {
             JoltVirtualPolynomial::NextIsFirstInSequence
+        }
+        prover_witness::VirtualPolynomial::RightLookupHighWord => {
+            JoltVirtualPolynomial::RightLookupHighWord
         }
         prover_witness::VirtualPolynomial::PrevRightLookupHighWord => {
             JoltVirtualPolynomial::PrevRightLookupHighWord

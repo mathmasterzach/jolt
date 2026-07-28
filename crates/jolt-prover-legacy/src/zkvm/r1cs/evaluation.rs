@@ -138,6 +138,7 @@ pub struct AzFirstGroup {
     pub should_jump: bool,            // ShouldJump
     pub virtual_instr_not_last: bool, // VirtualInstruction && !IsLastInSequence
     pub must_start_sequence: bool,    // NextIsVirtual && !NextIsFirstInSequence
+    pub use_previous_aux: bool,       // UsePreviousAux
 }
 
 impl AzFirstGroup {
@@ -160,22 +161,24 @@ impl AzFirstGroup {
         acc.fmadd(&w[7], &self.should_jump);
         acc.fmadd(&w[8], &self.virtual_instr_not_last);
         acc.fmadd(&w[9], &self.must_start_sequence);
+        acc.fmadd(&w[10], &self.use_previous_aux);
     }
 }
 
 /// Magnitudes for the first group (kept small: bool/u64/S64)
 #[derive(Clone, Copy, Debug)]
 pub struct BzFirstGroup {
-    pub ram_addr: u64,                               // RamAddress - 0
-    pub ram_read_minus_ram_write: S64,               // RamRead - RamWrite
-    pub ram_read_minus_rd_write: S64,                // RamRead - RdWrite
-    pub rs2_minus_ram_write: S64,                    // Rs2 - RamWrite
-    pub left_lookup: u64,                            // LeftLookup - 0
-    pub left_lookup_minus_left_input: S64,           // LeftLookup - LeftInstructionInput
-    pub lookup_output_minus_one: S64,                // LookupOutput - 1
-    pub next_unexp_pc_minus_lookup_output: S64,      // NextUnexpandedPC - LookupOutput
-    pub next_pc_minus_pc_plus_one: S64,              // NextPC - (PC + 1)
-    pub one_minus_do_not_update_unexpanded_pc: bool, // 1 - DoNotUpdateUnexpandedPC
+    pub ram_addr: u64,                                   // RamAddress - 0
+    pub ram_read_minus_ram_write: S64,                   // RamRead - RamWrite
+    pub ram_read_minus_rd_write: S64,                    // RamRead - RdWrite
+    pub rs2_minus_ram_write: S64,                        // Rs2 - RamWrite
+    pub left_lookup: u64,                                // LeftLookup - 0
+    pub left_lookup_minus_left_input: S64,               // LeftLookup - LeftInstructionInput
+    pub lookup_output_minus_one: S64,                    // LookupOutput - 1
+    pub next_unexp_pc_minus_lookup_output: S64,          // NextUnexpandedPC - LookupOutput
+    pub next_pc_minus_pc_plus_one: S64,                  // NextPC - (PC + 1)
+    pub one_minus_do_not_update_unexpanded_pc: bool,     // 1 - DoNotUpdateUnexpandedPC
+    pub prev_aux_minus_prev_right_lookup_high_word: S64, // PrevAuxContribution - PrevRightLookupHighWord
 }
 
 impl BzFirstGroup {
@@ -198,6 +201,7 @@ impl BzFirstGroup {
         acc.fmadd(&w[7], &self.next_unexp_pc_minus_lookup_output);
         acc.fmadd(&w[8], &self.next_pc_minus_pc_plus_one);
         acc.fmadd(&w[9], &self.one_minus_do_not_update_unexpanded_pc);
+        acc.fmadd(&w[10], &self.prev_aux_minus_prev_right_lookup_high_word);
     }
 }
 
@@ -315,6 +319,7 @@ impl<'a, F: JoltField> R1CSEval<'a, F> {
             should_jump: self.row.should_jump,
             virtual_instr_not_last: inline_seq && !self.row.flags[CircuitFlags::IsLastInSequence],
             must_start_sequence: self.row.next_is_virtual && !self.row.next_is_first_in_sequence,
+            use_previous_aux: self.row.flags[CircuitFlags::UsePreviousAux],
         }
     }
 
@@ -350,6 +355,10 @@ impl<'a, F: JoltField> R1CSEval<'a, F> {
             ),
             one_minus_do_not_update_unexpanded_pc: !self.row.flags
                 [CircuitFlags::DoNotUpdateUnexpandedPC],
+            prev_aux_minus_prev_right_lookup_high_word: s64_from_diff_u64s(
+                self.row.prev_aux_contribution,
+                self.row.prev_right_lookup_high_word,
+            ),
         }
     }
 
@@ -367,6 +376,7 @@ impl<'a, F: JoltField> R1CSEval<'a, F> {
         acc.fmadd(&w[7], &az.should_jump);
         acc.fmadd(&w[8], &az.virtual_instr_not_last);
         acc.fmadd(&w[9], &az.must_start_sequence);
+        acc.fmadd(&w[10], &az.use_previous_aux);
         acc.barrett_reduce()
     }
 
@@ -384,6 +394,7 @@ impl<'a, F: JoltField> R1CSEval<'a, F> {
         acc.fmadd(&w[7], &bz.next_unexp_pc_minus_lookup_output);
         acc.fmadd(&w[8], &bz.next_pc_minus_pc_plus_one);
         acc.fmadd(&w[9], &bz.one_minus_do_not_update_unexpanded_pc);
+        acc.fmadd(&w[10], &bz.prev_aux_minus_prev_right_lookup_high_word);
         acc.barrett_reduce()
     }
 
@@ -540,6 +551,11 @@ impl<'a, F: JoltField> R1CSEval<'a, F> {
             9,
             az.must_start_sequence,
             !bz.one_minus_do_not_update_unexpanded_pc,
+        );
+        self.assert_constraint_first_group(
+            10,
+            az.use_previous_aux,
+            bz.prev_aux_minus_prev_right_lookup_high_word.is_zero(),
         );
     }
 

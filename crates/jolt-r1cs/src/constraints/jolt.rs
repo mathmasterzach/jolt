@@ -67,7 +67,7 @@ pub const SPARTAN_PRODUCT_UNISKIP_FIRST_ROUND_DEGREE: usize =
 
 #[cfg(not(feature = "field-inline"))]
 pub const SPARTAN_OUTER_FIRST_GROUP_ROWS: [usize; SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE] =
-    [1, 2, 3, 4, 5, 6, 12, 15, 18, 19];
+    [1, 2, 3, 4, 5, 6, 12, 15, 18, 19, 20];
 
 #[cfg(feature = "field-inline")]
 pub const SPARTAN_OUTER_FIRST_GROUP_ROWS: [usize; SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE] = [
@@ -81,6 +81,7 @@ pub const SPARTAN_OUTER_FIRST_GROUP_ROWS: [usize; SPARTAN_OUTER_UNISKIP_DOMAIN_S
     15,
     18,
     19,
+    20,
     rv64::NUM_EQ_CONSTRAINTS + field_constraints::ROW_FADD,
     rv64::NUM_EQ_CONSTRAINTS + field_constraints::ROW_FSUB,
     rv64::NUM_EQ_CONSTRAINTS + field_constraints::ROW_FMUL,
@@ -422,12 +423,12 @@ mod tests {
     #[test]
     fn default_spartan_outer_geometry_matches_rv64() {
         assert_eq!(SPARTAN_OUTER_ROW_COUNT, rv64::NUM_EQ_CONSTRAINTS);
-        assert_eq!(SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE, 10);
-        assert_eq!(SPARTAN_OUTER_UNISKIP_FIRST_ROUND_DEGREE, 27);
+        assert_eq!(SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE, 11);
+        assert_eq!(SPARTAN_OUTER_UNISKIP_FIRST_ROUND_DEGREE, 30);
         assert_eq!(SPARTAN_OUTER_REMAINDER_DEGREE, 3);
         assert_eq!(
             SPARTAN_OUTER_FIRST_GROUP_ROWS,
-            [1, 2, 3, 4, 5, 6, 12, 15, 18, 19]
+            [1, 2, 3, 4, 5, 6, 12, 15, 18, 19, 20]
         );
         assert_eq!(
             SPARTAN_OUTER_SECOND_GROUP_ROWS,
@@ -557,11 +558,11 @@ mod tests {
             SPARTAN_OUTER_ROW_COUNT,
             rv64::NUM_EQ_CONSTRAINTS + field_constraints::NUM_EQ_CONSTRAINTS
         );
-        assert_eq!(SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE, 14);
-        assert_eq!(SPARTAN_OUTER_UNISKIP_FIRST_ROUND_DEGREE, 39);
+        assert_eq!(SPARTAN_OUTER_UNISKIP_DOMAIN_SIZE, 15);
+        assert_eq!(SPARTAN_OUTER_UNISKIP_FIRST_ROUND_DEGREE, 42);
         assert_eq!(SPARTAN_OUTER_REMAINDER_DEGREE, 3);
         assert_eq!(
-            &SPARTAN_OUTER_FIRST_GROUP_ROWS[10..],
+            &SPARTAN_OUTER_FIRST_GROUP_ROWS[11..],
             &[
                 rv64::NUM_EQ_CONSTRAINTS + field_constraints::ROW_FADD,
                 rv64::NUM_EQ_CONSTRAINTS + field_constraints::ROW_FSUB,

@@ -550,6 +550,7 @@ pub struct ShiftSumcheckCycleState {
     pub pc: u64,
     pub is_virtual: bool,
     pub is_first_in_sequence: bool,
+    pub right_lookup_high_word: u64,
     pub is_noop: bool,
 }
 
@@ -563,6 +564,7 @@ impl ShiftSumcheckCycleState {
             pc: crate::zkvm::bytecode::get_pc_for_cycle(bytecode_preprocessing, cycle) as u64,
             is_virtual: circuit_flags[CircuitFlags::VirtualInstruction],
             is_first_in_sequence: circuit_flags[CircuitFlags::IsFirstInSequence],
+            right_lookup_high_word: (LookupQuery::<XLEN>::to_lookup_operands(cycle).1 >> 64) as u64,
             is_noop: jolt_cycle.instruction_flags()[InstructionFlags::IsNoop],
         }
     }

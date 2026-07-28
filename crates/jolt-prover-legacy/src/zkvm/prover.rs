@@ -549,6 +549,12 @@ impl<
                 crate::zkvm::witness::VirtualPolynomial::PrevAuxContribution,
                 SumcheckId::SpartanOuter,
             );
+            // This stage-3 shift opening is likewise only carried forward through
+            // the final clear-claim projection.
+            let _ = self.opening_accumulator.get_virtual_polynomial_opening(
+                crate::zkvm::witness::VirtualPolynomial::RightLookupHighWord,
+                SumcheckId::SpartanShift,
+            );
         }
 
         #[cfg(test)]

@@ -264,11 +264,12 @@ fn claim_mut_from_stage3_outputs<F: Field>(
     claims: &mut Stage3OutputClaims<F>,
     id: native::JoltOpeningId,
 ) -> Option<&mut F> {
-    let [unexpanded_pc_shift, pc_shift, is_virtual_shift, is_first_in_sequence_shift, is_noop_shift] = [
+    let [unexpanded_pc_shift, pc_shift, is_virtual_shift, is_first_in_sequence_shift, right_lookup_high_word_shift, is_noop_shift] = [
         spartan::unexpanded_pc_shift(),
         spartan::pc_shift(),
         spartan::is_virtual_shift(),
         spartan::is_first_in_sequence_shift(),
+        spartan::right_lookup_high_word_shift(),
         spartan::is_noop_shift(),
     ];
     let [right_operand_is_rs2, rs2_value_input, right_operand_is_imm, imm_input, left_operand_is_rs1, rs1_value_input, left_operand_is_pc, unexpanded_pc_input] = [
@@ -292,6 +293,7 @@ fn claim_mut_from_stage3_outputs<F: Field>(
         id if id == pc_shift => Some(&mut claims.shift.pc),
         id if id == is_virtual_shift => Some(&mut claims.shift.is_virtual),
         id if id == is_first_in_sequence_shift => Some(&mut claims.shift.is_first_in_sequence),
+        id if id == right_lookup_high_word_shift => Some(&mut claims.shift.right_lookup_high_word),
         id if id == is_noop_shift => Some(&mut claims.shift.is_noop),
         id if id == left_operand_is_rs1 => Some(&mut claims.instruction_input.left_operand_is_rs1),
         id if id == rs1_value_input => Some(&mut claims.instruction_input.rs1_value),

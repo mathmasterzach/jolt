@@ -200,6 +200,7 @@ pub enum SpartanShiftChallenge {
 #[derive(Hash, PartialEq, Eq, Copy, Clone, Debug, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SpartanShiftPublic {
     EqPlusOneOuter,
+    EqMinusOneOuter,
     EqPlusOneProduct,
 }
 
@@ -460,6 +461,7 @@ pub enum JoltVirtualPolynomial {
     NextIsNoop,
     NextIsVirtual,
     NextIsFirstInSequence,
+    RightLookupHighWord,
     PrevRightLookupHighWord,
     PrevAuxContribution,
     LeftLookupOperand,

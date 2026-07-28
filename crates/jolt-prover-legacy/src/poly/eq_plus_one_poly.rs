@@ -108,6 +108,98 @@ impl<F: JoltField> EqPlusOnePolynomial<F> {
     }
 }
 
+/// Polynomial evaluating to eq-1(x, y) = 1 when y + 1 = x for x in
+/// [1, 2^l - 1]. This is the reverse-direction companion to
+/// [`EqPlusOnePolynomial`].
+pub struct EqMinusOnePolynomial<F: JoltField> {
+    pub x: Vec<F::Challenge>,
+}
+
+impl<F: JoltField> EqMinusOnePolynomial<F> {
+    pub fn new(x: Vec<F::Challenge>) -> Self {
+        Self { x }
+    }
+
+    /// This MLE is 1 if y + 1 = x, and 0 when x is the all-zero vector.
+    /// Assumes x and y are provided big-endian.
+    pub fn evaluate(&self, y: &[F::Challenge]) -> F {
+        let l = self.x.len();
+        let x = &self.x;
+        assert!(y.len() == l);
+        let one = F::from_u64(1_u64);
+
+        (0..l)
+            .into_par_iter()
+            .map(|k| {
+                let lower_bits_product = (0..k)
+                    .map(|i| (one - x[l - 1 - i]) * y[l - 1 - i])
+                    .product::<F>();
+                let kth_bit_product = x[l - 1 - k] * (one - y[l - 1 - k]);
+                let higher_bits_product = ((k + 1)..l)
+                    .map(|i| {
+                        x[l - 1 - i] * y[l - 1 - i] + (one - x[l - 1 - i]) * (one - y[l - 1 - i])
+                    })
+                    .product::<F>();
+                lower_bits_product * kth_bit_product * higher_bits_product
+            })
+            .sum()
+    }
+
+    /// Returns `(eq(x, ·), eq-1(x, ·))`.
+    pub fn evals(r: &[F::Challenge], scaling_factor: Option<F>) -> (Vec<F>, Vec<F>)
+    where
+        F::Challenge: Into<F>,
+        F: std::ops::Mul<F::Challenge, Output = F> + std::ops::SubAssign<F>,
+    {
+        let eq_evals = EqPolynomial::evals_with_scaling(r, scaling_factor);
+        let ell = r.len();
+        let domain_size = ell.pow2();
+        let one = F::one();
+
+        let eq_minus_one_evals = (0..domain_size)
+            .into_par_iter()
+            .map(|index| {
+                let mut matched = F::zero();
+                for k in 0..ell {
+                    let lower_bits_product = (0..k)
+                        .map(|i| {
+                            let bit = ((index >> i) & 1) == 1;
+                            let x_i: F = r[ell - 1 - i].into();
+                            if bit {
+                                one - x_i
+                            } else {
+                                F::zero()
+                            }
+                        })
+                        .product::<F>();
+                    let x_k: F = r[ell - 1 - k].into();
+                    let kth_term = if ((index >> k) & 1) == 0 {
+                        x_k
+                    } else {
+                        F::zero()
+                    };
+                    let higher_bits_product = ((k + 1)..ell)
+                        .map(|i| {
+                            let bit = ((index >> (ell - 1 - i)) & 1) == 1;
+                            let x_i: F = r[i].into();
+                            if bit {
+                                x_i
+                            } else {
+                                one - x_i
+                            }
+                        })
+                        .product::<F>();
+                    matched += lower_bits_product * kth_term * higher_bits_product;
+                }
+
+                matched
+            })
+            .collect();
+
+        (eq_evals, eq_minus_one_evals)
+    }
+}
+
 /// Prefix-suffix decomposition of eq+1 polynomial for sumcheck optimization.
 ///
 /// Decomposes eq+1((r_hi, r_lo), (y_hi, y_lo)) as:
@@ -136,6 +228,37 @@ impl<F: JoltField> EqPlusOnePrefixSuffixPoly<F> {
         let (suffix_0, suffix_1) = EqPlusOnePolynomial::<F>::evals(&r_hi.r, None);
         Self {
             prefix_0: EqPlusOnePolynomial::<F>::evals(&r_lo.r, None).1,
+            suffix_0,
+            prefix_1: prefix_1_evals,
+            suffix_1,
+        }
+    }
+}
+
+/// Prefix-suffix decomposition of eq-1 polynomial for sumcheck optimization.
+///
+/// Decomposes eq-1((r_hi, r_lo), (y_hi, y_lo)) as:
+///   prefix_0(r_lo, y_lo) * suffix_0(r_hi, y_hi) +
+///   prefix_1(r_lo, y_lo) * suffix_1(r_hi, y_hi)
+#[derive(Allocative)]
+pub struct EqMinusOnePrefixSuffixPoly<F: JoltField> {
+    pub prefix_0: Vec<F>,
+    pub suffix_0: Vec<F>,
+    pub prefix_1: Vec<F>,
+    pub suffix_1: Vec<F>,
+}
+
+impl<F: JoltField> EqMinusOnePrefixSuffixPoly<F> {
+    pub fn new(r: &OpeningPoint<BIG_ENDIAN, F>) -> Self {
+        let (r_hi, r_lo) = r.split_at(r.len() / 2);
+        let is_min_eval = EqPolynomial::mle(&vec![F::zero(); r_lo.len()], &r_lo.r);
+        let mut prefix_1_evals = vec![F::zero(); 1 << r_lo.len()];
+        if let Some(last) = prefix_1_evals.last_mut() {
+            *last = is_min_eval;
+        }
+        let (suffix_0, suffix_1) = EqMinusOnePolynomial::<F>::evals(&r_hi.r, None);
+        Self {
+            prefix_0: EqMinusOnePolynomial::<F>::evals(&r_lo.r, None).1,
             suffix_0,
             prefix_1: prefix_1_evals,
             suffix_1,

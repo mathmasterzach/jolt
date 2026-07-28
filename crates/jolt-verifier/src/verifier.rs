@@ -1395,6 +1395,7 @@ mod tests {
                     pc: zero,
                     is_virtual: zero,
                     is_first_in_sequence: zero,
+                    right_lookup_high_word: zero,
                     is_noop: zero,
                 },
                 instruction_input: stage3::outputs::InstructionInputOutputClaims {

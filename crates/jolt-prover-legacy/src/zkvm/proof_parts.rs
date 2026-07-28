@@ -435,7 +435,8 @@ impl CanonicalSerialize for VirtualPolynomial {
             Self::NextIsNoop => 4u8.serialize_with_mode(&mut writer, compress),
             Self::NextIsVirtual => 5u8.serialize_with_mode(&mut writer, compress),
             Self::NextIsFirstInSequence => 6u8.serialize_with_mode(&mut writer, compress),
-            Self::PrevRightLookupHighWord => 7u8.serialize_with_mode(&mut writer, compress),
+            Self::RightLookupHighWord => 7u8.serialize_with_mode(&mut writer, compress),
+            Self::PrevRightLookupHighWord => 47u8.serialize_with_mode(&mut writer, compress),
             Self::PrevAuxContribution => 46u8.serialize_with_mode(&mut writer, compress),
             Self::LeftLookupOperand => 8u8.serialize_with_mode(&mut writer, compress),
             Self::RightLookupOperand => 9u8.serialize_with_mode(&mut writer, compress),
@@ -504,6 +505,7 @@ impl CanonicalSerialize for VirtualPolynomial {
             | Self::NextIsNoop
             | Self::NextIsVirtual
             | Self::NextIsFirstInSequence
+            | Self::RightLookupHighWord
             | Self::PrevRightLookupHighWord
             | Self::PrevAuxContribution
             | Self::LeftLookupOperand
@@ -569,8 +571,9 @@ impl CanonicalDeserialize for VirtualPolynomial {
                 4 => Self::NextIsNoop,
                 5 => Self::NextIsVirtual,
                 6 => Self::NextIsFirstInSequence,
-                7 => Self::PrevRightLookupHighWord,
+                7 => Self::RightLookupHighWord,
                 46 => Self::PrevAuxContribution,
+                47 => Self::PrevRightLookupHighWord,
                 8 => Self::LeftLookupOperand,
                 9 => Self::RightLookupOperand,
                 10 => Self::LeftInstructionInput,
@@ -721,6 +724,7 @@ mod tests {
                 | VirtualPolynomial::NextIsNoop
                 | VirtualPolynomial::NextIsVirtual
                 | VirtualPolynomial::NextIsFirstInSequence
+                | VirtualPolynomial::RightLookupHighWord
                 | VirtualPolynomial::PrevRightLookupHighWord
                 | VirtualPolynomial::PrevAuxContribution
                 | VirtualPolynomial::LeftLookupOperand
@@ -771,6 +775,7 @@ mod tests {
             VirtualPolynomial::NextIsNoop,
             VirtualPolynomial::NextIsVirtual,
             VirtualPolynomial::NextIsFirstInSequence,
+            VirtualPolynomial::RightLookupHighWord,
             VirtualPolynomial::PrevRightLookupHighWord,
             VirtualPolynomial::PrevAuxContribution,
             VirtualPolynomial::LeftLookupOperand,

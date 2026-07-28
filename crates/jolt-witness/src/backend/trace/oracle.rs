@@ -150,6 +150,7 @@ impl<T: TraceSource + Clone> TraceBackend<'_, T> {
                 | V::NextIsNoop
                 | V::NextIsVirtual
                 | V::NextIsFirstInSequence
+                | V::RightLookupHighWord
                 | V::PrevRightLookupHighWord
                 | V::PrevAuxContribution
                 | V::LeftLookupOperand
@@ -252,6 +253,7 @@ impl<F: Field, T: TraceSource + Clone> JoltWitnessOracle<F> for TraceBackend<'_,
                 V::NextIsNoop => self.materialize_cycle::<F, NextIsNoop>(),
                 V::NextIsVirtual => self.materialize_cycle::<F, NextIsVirtual>(),
                 V::NextIsFirstInSequence => self.materialize_cycle::<F, NextIsFirstInSequence>(),
+                V::RightLookupHighWord => Err(not_served(id, UNSERVED_REASON)),
                 V::PrevRightLookupHighWord => self.materialize_prev_right_lookup_high_word(),
                 V::PrevAuxContribution => self.materialize_prev_aux_contribution(),
                 V::LeftLookupOperand => self.materialize_cycle::<F, LeftLookupOperand>(),

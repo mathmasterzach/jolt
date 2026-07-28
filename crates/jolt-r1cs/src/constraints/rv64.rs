@@ -15,8 +15,8 @@
 //!
 //! # Constraint forms
 //!
-//! - **Eq-conditional** (rows 0–19): `guard · (left − right) = 0`
-//! - **Product** (rows 20–22): `left · right = output`
+//! - **Eq-conditional** (rows 0–20): `guard · (left − right) = 0`
+//! - **Product** (rows 21–23): `left · right = output`
 
 /// Constant-1 wire.
 pub const V_CONST: usize = 0;
@@ -67,9 +67,9 @@ pub const V_NEXT_IS_NOOP: usize = 40;
 pub const NUM_R1CS_INPUTS: usize = 38;
 pub const NUM_PRODUCT_FACTORS: usize = 2;
 pub const NUM_VARS_PER_CYCLE: usize = 1 + NUM_R1CS_INPUTS + NUM_PRODUCT_FACTORS; // 41
-pub const NUM_EQ_CONSTRAINTS: usize = 20;
+pub const NUM_EQ_CONSTRAINTS: usize = 21;
 pub const NUM_PRODUCT_CONSTRAINTS: usize = 3;
-pub const NUM_CONSTRAINTS_PER_CYCLE: usize = NUM_EQ_CONSTRAINTS + NUM_PRODUCT_CONSTRAINTS; // 23
+pub const NUM_CONSTRAINTS_PER_CYCLE: usize = NUM_EQ_CONSTRAINTS + NUM_PRODUCT_CONSTRAINTS; // 24
 
 pub const fn const_column() -> usize {
     V_CONST
@@ -527,6 +527,17 @@ fn rv64_eq_constraint_rows<F: Field>() -> ConstraintRows<F> {
     ]));
     c_rows.push(empty());
 
+    // 20: PrevAuxContributionMatchesPrevRightLookupHighWord
+    //     guard = UsePreviousAux
+    //     left  = PrevAuxContribution
+    //     right = PrevRightLookupHighWord
+    a_rows.push(row::<F>(&[(V_FLAG_USE_PREVIOUS_AUX, 1)]));
+    b_rows.push(row::<F>(&[
+        (V_PREV_AUX_CONTRIBUTION, 1),
+        (V_PREV_RIGHT_LOOKUP_HIGH_WORD, -1),
+    ]));
+    c_rows.push(empty());
+
     (a_rows, b_rows, c_rows)
 }
 
@@ -535,7 +546,7 @@ fn append_product_constraints<F: Field>(
     b_rows: &mut Vec<SparseRow<F>>,
     c_rows: &mut Vec<SparseRow<F>>,
 ) {
-    // Product constraints (20-22)
+    // Product constraints (21-23)
     // Form: left · right = output  →  A=left, B=right, C=output
 
     // 20: Product = LeftInstructionInput × RightInstructionInput
@@ -629,9 +640,9 @@ mod tests {
     #[test]
     fn constraint_count() {
         let matrices = rv64_trace_constraints::<Fr>();
-        assert_eq!(matrices.a.len(), 23);
-        assert_eq!(matrices.b.len(), 23);
-        assert_eq!(matrices.c.len(), 23);
+        assert_eq!(matrices.a.len(), 24);
+        assert_eq!(matrices.b.len(), 24);
+        assert_eq!(matrices.c.len(), 24);
     }
 
     #[test]

@@ -33,6 +33,7 @@ pub fn spartan_shift_input_values_from_upstream<F: Field>(
         next_pc: outer.next_pc,
         next_is_virtual: outer.next_is_virtual,
         next_is_first_in_sequence: outer.next_is_first_in_sequence,
+        prev_right_lookup_high_word: outer.prev_right_lookup_high_word,
         next_is_noop: stage2.product_remainder.next_is_noop,
     }
 }
@@ -75,6 +76,7 @@ impl<F: Field> ConcreteSumcheck<F> for SpartanShift<F> {
             pc: opening_point.clone(),
             is_virtual: opening_point.clone(),
             is_first_in_sequence: opening_point.clone(),
+            right_lookup_high_word: opening_point.clone(),
             is_noop: opening_point,
         })
     }
@@ -96,6 +98,10 @@ impl<F: Field> ConcreteSumcheck<F> for SpartanShift<F> {
                 self.product_uniskip_tau_low.clone(),
             )
             .evaluate(opening_point)),
+            SpartanShiftPublic::EqMinusOneOuter => {
+                Ok(EqPlusOnePolynomial::new(opening_point.to_vec())
+                    .evaluate(&self.product_uniskip_tau_low))
+            }
             SpartanShiftPublic::EqPlusOneProduct => Ok(EqPlusOnePolynomial::new(
                 self.product_remainder_opening_point.clone(),
             )

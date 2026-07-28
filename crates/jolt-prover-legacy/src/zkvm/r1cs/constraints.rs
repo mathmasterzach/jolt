@@ -173,6 +173,7 @@ pub enum R1CSConstraintLabel {
     NextUnexpPCUpdateOtherwise,
     NextPCEqPCPlusOneIfInline,
     MustStartSequenceFromBeginning,
+    PrevAuxContributionMatchesPrevRightLookupHighWord,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -413,6 +414,11 @@ pub static R1CS_CONSTRAINTS: [NamedR1CSConstraint; NUM_R1CS_CONSTRAINTS] = [
         if { { JoltR1CSInputs::NextIsVirtual } - { JoltR1CSInputs::NextIsFirstInSequence } }
         => ( { 1i128 } ) == ( { JoltR1CSInputs::OpFlags(CircuitFlags::DoNotUpdateUnexpandedPC) } )
     ),
+    r1cs_eq_conditional!(
+        label: R1CSConstraintLabel::PrevAuxContributionMatchesPrevRightLookupHighWord,
+        if { { JoltR1CSInputs::OpFlags(CircuitFlags::UsePreviousAux) } }
+        => ( { JoltR1CSInputs::PrevAuxContribution } ) == ( { JoltR1CSInputs::PrevRightLookupHighWord } )
+    ),
 ];
 
 /// Degree of univariate skip, defined to be `(NUM_R1CS_CONSTRAINTS - 1) / 2`
@@ -506,7 +512,7 @@ const fn complement_first_group_labels() -> [R1CSConstraintLabel; NUM_REMAINING_
     out
 }
 
-/// First group: 10 boolean-guarded eq constraints, where Bz is around 64 bits
+/// First group: 11 boolean-guarded eq constraints, where Bz is around 64 bits
 pub const R1CS_CONSTRAINTS_FIRST_GROUP_LABELS: [R1CSConstraintLabel;
     OUTER_UNIVARIATE_SKIP_DOMAIN_SIZE] = [
     R1CSConstraintLabel::RamAddrEqZeroIfNotLoadStore,
@@ -519,6 +525,7 @@ pub const R1CS_CONSTRAINTS_FIRST_GROUP_LABELS: [R1CSConstraintLabel;
     R1CSConstraintLabel::NextUnexpPCEqLookupIfShouldJump,
     R1CSConstraintLabel::NextPCEqPCPlusOneIfInline,
     R1CSConstraintLabel::MustStartSequenceFromBeginning,
+    R1CSConstraintLabel::PrevAuxContributionMatchesPrevRightLookupHighWord,
 ];
 
 /// Second group: complement of first within R1CS_CONSTRAINTS
@@ -526,7 +533,7 @@ pub const R1CS_CONSTRAINTS_FIRST_GROUP_LABELS: [R1CSConstraintLabel;
 pub const R1CS_CONSTRAINTS_SECOND_GROUP_LABELS: [R1CSConstraintLabel;
     NUM_REMAINING_R1CS_CONSTRAINTS] = complement_first_group_labels();
 
-/// First group: 10 boolean-guarded eq constraints, where Bz is around 64 bits
+/// First group: 11 boolean-guarded eq constraints, where Bz is around 64 bits
 pub static R1CS_CONSTRAINTS_FIRST_GROUP: [NamedR1CSConstraint; OUTER_UNIVARIATE_SKIP_DOMAIN_SIZE] =
     filter_r1cs_constraints(&R1CS_CONSTRAINTS_FIRST_GROUP_LABELS);
 
